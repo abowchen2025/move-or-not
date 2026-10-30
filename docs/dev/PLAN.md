@@ -5,7 +5,7 @@
 | 規格依據 | `docs/SRS.md` v1.3 ＋ `docs/dev/DECISIONS.md`（衝突時以 DECISIONS 為準） |
 | 撰寫 | RD |
 | 日期 | 2026-10-30 |
-| 狀態 | 階段 0，待 SA 審核 |
+| 狀態 | 階段 0，待 SA 審核（已依 SA 回覆 PR #1 更新：D-23～D-27、D-18／19／20 修訂） |
 
 本文件引用條文一律用編號：SRS 條文寫作「FR-06」「§4.2」「AC-21」；決策寫作「D-07」；D-22 的子項寫作「D-22-a」～「D-22-p」（見 DECISIONS.md 表格）；本文件提出的疑問寫作「Q-RD-xx」（見 §6）。
 
@@ -42,16 +42,17 @@
 
 ### 階段 2 — `feat/api`：完整後端
 
-- **範圍**：§5、§7 全部；§4 的伺服器端；NFR-S1～S5、S7；D-08（端點）、D-09、D-10、D-15、D-22-b、c、e、f、g。
+- **範圍**：§5、§7 全部；§4 的伺服器端；NFR-S1～S5、S7；D-08（端點）、D-09、D-10、D-15、D-22-b、c、e、g、D-24（程式端）、D-25、D-26、D-27。
 - **產出（預定）**：
   - `api/app/`：`main.py`（app factory `create_app(config_path, data_dir, clock)`）、`settings.py`（環境變數、`DATA_DIR` 的三段退路）、`clock.py`（可注入的時鐘）、`days.py`（純函式：今天、天數、完結日）、`seasons.py`（讀取並驗證 `seasons.config.json`）、`storage.py`（原子寫入、lock、種子、損毀偵測、audit）、`auth.py`（常數時間比較、失敗計數）、`errors.py`（錯誤代碼與中性 message）、`routes.py`。
-  - Railway 部署設定（啟動指令監聽 `$PORT`、健康檢查 `/api/health`、副本數 1）：原定 `api/railway.toml`，但依 §5 第 5a 項 Config as Code 已棄用，**形式待 Q-RD-01 回覆**；來源 IP 判斷待 Q-RD-02 回覆。
+  - Railway 部署設定：依 D-23 **repo 內不放任何 Railway 設定檔**。本階段只確保 `api/` 可被 Railway 直接建置（`requirements.txt`、Python 3.12 版本指定方式依 §5 第 13 項查證），並確定要填在 Railway 介面的啟動指令（監聽 `$PORT`），寫進 PR 說明，階段 7 再寫入 DEPLOY_GUIDE。
+  - 來源 IP：依 D-24 讀 `X-Real-IP`，沒有時用連線 IP；標頭名稱放在後端設定（`settings.py`），不寫死在路由裡。
   - `api/tests/`：見 §4。
-- **完成條件**：AC-01、07（自動化部分）、08（API）、09、11（API）、21（API）、22（API）、32 的 pytest 全過；Ruff 無錯；啟動時 `ADMIN_PASSPHRASE` 未設定或短於 16 字元時拒絕啟動。
+- **完成條件**：AC-01、07（自動化部分）、08（API）、09（依 D-25）、11（API）、21（API）、22（API）、32 的 pytest 全過；D-24～D-27 各有 pytest；Ruff 無錯；啟動時 `ADMIN_PASSPHRASE` 未設定或短於 16 字元時拒絕啟動。
 
 ### 階段 3 — `feat/web-core`：時間、資料、版面
 
-- **範圍**：FR-01、03（不含跳數字動畫）、04、05、07、09、10、11；§4.1～4.4 前端部分；§3.3 規則 1、3 的前端部分；D-04、D-05、D-06、D-22-a、c、k、l。
+- **範圍**：FR-01、03（不含跳數字動畫）、04、05、07、09、10、11；§4.1～4.4 前端部分；§3.3 規則 1、3 的前端部分；D-04、D-05、D-06、D-22-a、c、k、l、D-27（退路模式的天數同樣最小為 0）。
 - **產出（預定）**：
   - `web/src/time/`（offset、台灣日期、天數純函式）、`web/src/api/`（client、15 秒整段逾時、錯誤代碼轉文案）、`web/src/season/`（`?season=` 解析、劇本載入）、`web/src/sync/`（60 秒輪詢、`visibilitychange`、每秒跨日檢查、D-06 連續失敗計數）、`web/src/ui/`（DOM 區塊）。
   - Vite 外掛：建置與 dev 時把 `api/seasons.config.json` 的 `startDate`、`countInclusive` 以虛擬模組提供給退路模式（D-04；方式見 §5 查證）。
@@ -80,11 +81,11 @@
 
 - **範圍**：FR-13；D-18、D-19、D-20、D-22-m、n、o。
 - **產出（預定）**：`web/src/replay/`（由 `records` 產生時間軸的純函式、播放排程器〔暫停、下一則、2 倍速、結束〕、對話框逐字顯示、`#replay` 處理）。
-- **完成條件**：AC-24～29 通過（vitest 驗時間軸與控制邏輯、Playwright 驗 `#replay` 與畫面切換）；回放前後 API 寫入呼叫次數為 0 的斷言。
+- **完成條件**：AC-24～29 通過（vitest 驗時間軸與控制邏輯、Playwright 驗 `#replay` 與畫面切換）；AC-24 依 D-20 的解讀撰寫，另加一條「完結日之後的記錄不播出」的測試；回放前後 API 寫入呼叫次數為 0 的斷言。
 
 ### 階段 7 — `feat/deploy`：部署與收尾
 
-- **範圍**：FR-12；Pages workflow；D-13、D-22-f、h；端到端煙霧測試；README；DEPLOY_GUIDE 更新（SA 初版為基礎，依實作結果修改）；AC 總對照。
+- **範圍**：FR-12；Pages workflow；D-13、D-22-f、h、D-23（介面設定寫進 DEPLOY_GUIDE）、D-24（部署後實測，若標頭可偽造則停下回報）；端到端煙霧測試；README；DEPLOY_GUIDE 更新（SA 初版為基礎，依實作結果修改）；AC 總對照。
 - **產出（預定）**：
   - `.github/workflows/deploy-pages.yml`（`main` 的 `web/**` 變更＋`workflow_dispatch`，讀 `VITE_API_BASE`、`VITE_SITE_URL`；觸發路徑待 Q-RD-05 回覆）。
   - 建置時把最新一季劇本的 `<title>`、`og:*` 寫入 `index.html`（D-22-h），og:image 用 `VITE_SITE_URL` 組成絕對網址（D-13）。
@@ -108,6 +109,8 @@
 | 8 | og:image、favicon 的 PNG 在**階段 5** 由同一支產圖腳本產出，階段 7 才接到 `index.html` | D-16 規定同一支一次性腳本產出所有圖檔 |
 | 9 | AC-10 在階段 4 再驗一次 | 管理模式的表單是另一個輸出備註的路徑 |
 | 10 | 新增 `docs/dev/AC_REPORT.md`（階段 7） | 骨架的「AC 總對照」需要一個落地檔案 |
+| 11 | 階段 0 修改了 CLAUDE.md §4 的 Railway 那一列（只改這一列） | D-23，SA 授權在本 PR 修改 |
+| 12 | 移除 `api/railway.toml`：階段 2、7 都不產出任何 Railway 設定檔 | D-23 |
 
 ---
 
@@ -140,7 +143,7 @@
 |---|---|---|---|
 | NFR-S1 密語只在環境變數 | 2、7 | py（未設定或 < 16 字元拒絕啟動；log 不含密語）＋sh（check-deid 機密項） | — |
 | NFR-S2 常數時間比較 | 2 | py（monkeypatch 確認經過 `hmac.compare_digest`） | — |
-| NFR-S3 失敗次數限制 | 2（文案 4） | py（注入時鐘：5 次、10 分鐘窗、不同 IP 分開計） | SA（部署後確認來源 IP，D-22-d） |
+| NFR-S3 失敗次數限制 | 2（文案 4） | py（注入時鐘：依 D-25 第 1～5 次 401、之後 429、10 分鐘滑動視窗、不同 IP 分開計；依 D-24 讀 `X-Real-IP`） | RD（階段 7 部署後依 D-24 實測） |
 | NFR-S4 CORS | 2 | py（允許／拒絕的 origin、preflight） | SA（部署後瀏覽器無 CORS 錯誤） |
 | NFR-S5 只收 JSON | 2 | py（415，套用範圍依 D-10） | — |
 | NFR-S6 textContent | 3、4 | vt＋pw（AC-10）＋ESLint 禁用 `innerHTML` | — |
@@ -199,7 +202,7 @@
 | AC-06 | 7 | vt 已驗 60 秒輪詢 | SA |
 | AC-07 | 2、7 | py（重啟不覆蓋） | SA（重新部署） |
 | AC-08 | 2、4 | py（無／錯密語 401）＋pw | — |
-| AC-09 | 2 | py（計數語意待 Q-RD-02） | — |
+| AC-09 | 2、7 | py（計數語意依 D-25：第 6 次起 429，正確密語也 429） | RD（階段 7 部署後依 D-24 實測） |
 | AC-10 | 3、4 | pw（顯示為文字、無 dialog 事件） | — |
 | AC-11 | 2、4 | py＋vt | — |
 | AC-12 | 5 | vt（軌道計算，多種標題寬度與 sprite 寬度） | RD（縮放、旋轉錄影） |
@@ -214,7 +217,7 @@
 | AC-21 | 2、4 | py（422）＋vt／pw（min／max） | — |
 | AC-22 | 2、4 | py（`note` 省略時保留）＋pw（確認框內容） | — |
 | AC-23 | 2、3、5 | py＋vt | RD |
-| AC-24 | 6 | vt（時間軸，範圍依 D-20）＋pw | RD 錄影 |
+| AC-24 | 6 | vt（時間軸，已完結時為完結日〔含〕以前的每一筆，依 D-20；另一條測試確認完結日之後的記錄不播）＋pw | RD 錄影 |
 | AC-25 | 6 | vt（依 `date` 排序，與 `updatedAt` 無關） | — |
 | AC-26 | 6 | vt＋pw（寫入請求數 0） | — |
 | AC-27 | 6 | pw | — |
@@ -246,14 +249,14 @@
 | D-15 | 2 | py | — |
 | D-16 | 5 | CI（ESLint 禁止 import `tools/`、dist 搜尋）；腳本重跑產出一致 | RD |
 | D-17 | 1 | tsc | — |
-| D-18 | 6 | vt＋pw（按鍵範圍依 Q-RD-06） | — |
-| D-19 | 6 | pw（區塊顯示狀態） | — |
-| D-20 | 6 | vt | — |
+| D-18 | 6 | vt（按鍵對應表：空白、Esc、Tab／Shift+Tab、控制列上的 Enter、單獨修飾鍵、其他鍵）＋pw（純鍵盤操作控制列） | — |
+| D-19 | 6 | pw（三個區塊與 🔑 隱藏、免責聲明仍顯示） | — |
+| D-20 | 6 | vt（含「完結日之後不播」測試） | — |
 | D-21 | 5 | vt＋pw | RD 錄影 |
 | D-22-a | 3 | vt | — |
 | D-22-b | 2 | py | — |
 | D-22-c | 2 | py | — |
-| D-22-d | 2 | 文件查證（§5） | SA（部署後實測） |
+| D-22-d | 0、7 | 文件查證（§5 第 4 項），後續依 D-24 | RD（階段 7 實測） |
 | D-22-e | 2 | py | — |
 | D-22-f | 7 | DEPLOY_GUIDE 內容 | SA |
 | D-22-g | 2 | py（錯密語＋不存在季別 → 401） | — |
@@ -266,6 +269,11 @@
 | D-22-n | 6 | vt | — |
 | D-22-o | 6 | vt（假計時器） | — |
 | D-22-p | 1 | sh（AC-30 在 CI） | — |
+| D-23 | 0、2、7 | 階段 0 修改 CLAUDE.md §4；`git ls-files` 中沒有 `railway.toml`／`railway.json`／`.railway/`；DEPLOY_GUIDE 列出全部介面設定 | SA（依 DEPLOY_GUIDE 在 Railway 介面設定） |
+| D-24 | 2、7 | py（有 `X-Real-IP` 時以它計數；沒有時用連線 IP；標頭名稱來自設定） | RD（階段 7 部署後送 6 次錯誤密語、每次偽造不同 `X-Real-IP`，第 6 次須為 429；結果寫進 DEPLOY_GUIDE） |
+| D-25 | 2 | py（第 1～5 次 401；第 6 次起 429 且不比對密語；視窗過期後恢復；不同 IP 互不影響） | — |
+| D-26 | 2 | py（格式錯 422 `INVALID_DATE`；範圍外但格式正確且有記錄→刪除成功；不存在→404 `RECORD_NOT_FOUND`） | — |
+| D-27 | 2、3 | py（未來起始日：`daysElapsed`＝0、PUT 422）＋vt（退路計算最小為 0） | — |
 
 ---
 
@@ -298,7 +306,8 @@
   - §4.2：共用案例表參數化。
   - §4.4：多筆 `executed=true` 取最早；補記過去日期；刪除後解除凍結（AC-17、23）。
   - 日期驗證邊界：台灣 23:59:59 時「今天」可寫、「明天」回 422；跨過 00:00 後「明天」變成可寫（AC-21）。
-- **其他**：失敗計數用同一個注入時鐘推進 10 分鐘；種子與損毀檔用 `tmp_path`；併發寫入用多執行緒呼叫 `storage` 驗證結果無遺失。
+- **未來起始日（D-27）**：暫存設定檔加入 `startDate` 晚於注入時鐘的季別，驗證 `daysElapsed`＝0、任何日期 PUT 都回 422。
+- **其他**：失敗計數（D-25）用同一個注入時鐘推進，驗證滑動視窗：第 5 次失敗後 9 分 59 秒仍 429、最早一次失敗滿 10 分鐘後該筆過期；測試用 `TestClient` 帶不同 `X-Real-IP` 模擬不同來源（D-24）；種子與損毀檔用 `tmp_path`；併發寫入用多執行緒呼叫 `storage` 驗證結果無遺失。
 
 ### 4.3 vitest（前端）
 
@@ -351,10 +360,10 @@
 | 1 | PixiJS v8 與 pixi-filters | 已查證 | `pixi.js` 最新為 8.22.0；對應 v8 的是 `pixi-filters` 6.x（最新 6.1.5，peer 依賴 `pixi.js >=8.0.0-0`），含 `CRTFilter`（`pixi-filters/crt`）與 `GlowFilter`（`pixi-filters/glow`），可個別 import | https://registry.npmjs.org/pixi.js/latest 、 https://registry.npmjs.org/pixi-filters/latest 、 https://github.com/pixijs/filters |
 | 2 | spritesheet JSON 的 `meta` 能否放自訂欄位 | 部分查證 | v8 原始碼中 `SpritesheetData.meta` 型別**沒有**索引簽章（只有 `scale`、`image`、`size`、`frameTags` 等）；但 `Spritesheet<S extends SpritesheetData>` 為泛型、`data` 保留原始 JSON，載入器原樣傳入。**推論**：自訂欄位在執行期可由 `spritesheet.data.meta` 讀到，TypeScript 端需自行擴充型別。`animations` 只支援影格名稱陣列，**沒有**各動作速度，速度需放在自訂 `meta` 欄位（符合 D-22-i）。階段 5 以單元測試實證 | https://github.com/pixijs/pixijs/blob/dev/src/spritesheet/Spritesheet.ts 、 https://github.com/pixijs/pixijs/blob/dev/src/spritesheet/spritesheetAsset.ts |
 | 3 | 俐方體 11 號 woff2 與授權檔 | 已查證 | 官方 repo `ACh-K/Cubic-11`，最新版 v1.500（2026-06-27）；release 沒有附檔，woff2 在 repo 內 `fonts/web/Cubic_11.woff2`（約 400KB）；授權 SIL OFL 1.1，授權檔為 repo 根目錄 `OFL.txt`。階段 3 從 tag v1.500 取得並記錄版本 | https://github.com/ACh-K/Cubic-11 、 https://api.github.com/repos/ACh-K/Cubic-11/releases/latest |
-| 4 | Railway 轉送來源 IP 的標頭（NFR-S3、D-22-d） | 部分查證 | 官方文件只列出 `X-Real-IP`（「identifying client's remote IP」）、`X-Forwarded-Proto`、`X-Forwarded-Host` 等，**沒有**提到 `X-Forwarded-For`，也**沒有**說明是否覆寫客戶端自帶的同名標頭。社群討論有人稱邊緣節點會覆寫，但不是官方說法。**需部署後實測**，見 Q-RD-02 | https://docs.railway.com/networking/public-networking/specs-and-limits |
+| 4 | Railway 轉送來源 IP 的標頭（NFR-S3、D-22-d） | 部分查證 | 官方文件只列出 `X-Real-IP`（「identifying client's remote IP」）、`X-Forwarded-Proto`、`X-Forwarded-Host` 等，**沒有**提到 `X-Forwarded-For`，也**沒有**說明是否覆寫客戶端自帶的同名標頭。社群討論有人稱邊緣節點會覆寫，但不是官方說法。**需部署後實測**；依 D-24 預設讀 `X-Real-IP`，階段 7 實測 | https://docs.railway.com/networking/public-networking/specs-and-limits |
 | 5 | Railway Volume 與副本數 | 已查證 | 「Replicas cannot be used with volumes」；有 Volume 的服務重新部署時會有短暫停機；預設容量 Free/Trial 0.5GB、Hobby 5GB、Pro 50GB；Railway 會自動提供 `RAILWAY_VOLUME_MOUNT_PATH`（符合 §8.5 的退路順序） | https://docs.railway.com/reference/volumes 、 https://docs.railway.com/reference/variables |
-| 5a | Railway 設定檔 `railway.toml`（CLAUDE.md §4） | 已查證（**與 CLAUDE.md 衝突**） | Config as Code（`railway.toml`／`railway.json`）**已棄用**：「New services cannot opt into Config as Code」，既有檔案於 **2026-12-01** 停止讀取。取代方案為 Infrastructure as Code（`.railway/railway.ts`，TypeScript 為正式版、Python 為 beta），且「Railway doesn't read `.railway/` during deploys」，需用 CLI `railway config apply` 或 GitHub Action 套用。見 Q-RD-01 | https://docs.railway.com/reference/config-as-code 、 https://docs.railway.com/infrastructure-as-code |
-| 5b | Railway 設定檔路徑不跟隨 Root Directory | 已查證 | 文件明載需填絕對路徑（例 `/backend/railway.toml`），與 CLAUDE.md §4 一致；但因 5a，此項可能不再適用 | https://docs.railway.com/deployments/monorepo |
+| 5a | Railway 設定檔 `railway.toml`（原 CLAUDE.md §4） | 已查證（已依 D-23 處理） | Config as Code（`railway.toml`／`railway.json`）**已棄用**：「New services cannot opt into Config as Code」，既有檔案於 **2026-12-01** 停止讀取。取代方案為 Infrastructure as Code（`.railway/railway.ts`，TypeScript 為正式版、Python 為 beta），且「Railway doesn't read `.railway/` during deploys」，需用 CLI `railway config apply` 或 GitHub Action 套用。依 D-23 兩者都不採用，改在 Railway 介面設定 | https://docs.railway.com/reference/config-as-code 、 https://docs.railway.com/infrastructure-as-code |
+| 5b | Railway 設定檔路徑不跟隨 Root Directory | 已查證 | 文件明載需填絕對路徑（例 `/backend/railway.toml`），依 D-23 不使用設定檔，此項不再適用 | https://docs.railway.com/deployments/monorepo |
 | 5c | Railway 閒置休眠 | 已查證 | 功能現稱「Serverless」（舊稱 App Sleeping）；喚醒的第一個請求「may return a 502 Bad Gateway」。**設計**：前端 API client 在 FR-11 的 15 秒整段預算內，對 502／網路錯誤自動重試，不新增任何端點 | https://docs.railway.com/deployments/serverless |
 | 6 | Vite 讀取 repo 內 `api/seasons.config.json`（D-04） | 部分查證 | Vite 最新 8.3.5。dev 時 `server.fs.strict` 預設開啟，`server.fs.allow` 預設為偵測到的 workspace 根目錄，找不到時退回專案根目錄（即 `web/`），範圍外的檔案會回 403。**做法**：寫一個 Vite 外掛，在 Node 端用 `fs` 讀取設定檔，只取出 `id`、`startDate`、`countInclusive`，以虛擬模組（`resolveId`／`load`）提供給前端，build 與 dev 共用同一段程式。這樣不透過瀏覽器讀取範圍外的檔案，也不必放寬 `fs.allow`。**待實測**：dev 時修改設定檔能否觸發重新載入（外掛內以 `addWatchFile` 或 server watcher 處理）。`transformIndexHtml` 在 dev 與 build 都會執行，可用於 D-22-h | https://vite.dev/config/server-options 、 https://vite.dev/guide/api-plugin |
 | 6a | Vite 環境變數與 `.env.local`（D-14） | 已查證 | 只有 `VITE_` 前綴會進 `import.meta.env`；`.env.local` 在所有模式都會載入，但**不會自動被 git 忽略**，需自行在 `.gitignore` 加入 `*.local`；行程環境變數優先順序最高（CI 可直接設定） | https://vite.dev/guide/env-and-mode |
@@ -363,8 +372,8 @@
 | 9 | Node／Vitest 指定時區 | 部分查證 | Vitest 最新 5.0.5（peer 依賴 `vite ^6.4.0 || ^7.0.0 || ^8.0.0`，與 Vite 8 相容）。Node 文件：執行期設定 `process.env.TZ` 會生效，POSIX 自 v13.0.0、Windows 自 v16.2.0 起支援。Vitest 沒有時區選項（issue #1575 以 not planned 關閉）；有使用者回報 `test.env` 設定太晚、無效，在 `globalSetup` 設定則有效（社群回報，非官方）。**做法**：每個時區一個 Vitest project，以 `globalSetup` 設定 `TZ`，並加一條斷言測試確認 `getTimezoneOffset()` 符合預期，避免設定失效卻沒發現。階段 1 實測 | https://nodejs.org/api/cli.html#tz 、 https://github.com/vitest-dev/vitest/issues/1575 |
 | 10 | Playwright `timezoneId`、Clock、`reducedMotion` | 已查證 | Clock 自 v1.45 起提供（`@playwright/test` 最新 1.64.1），會接管 `Date`、`setTimeout`、`setInterval`、`requestAnimationFrame`、`performance` 等；方法有 `install`、`setFixedTime`、`pauseAt`、`fastForward`、`runFor`、`resume`。`timezoneId` 與 `reducedMotion: 'reduce'` 為 context 選項 | https://playwright.dev/docs/clock 、 https://playwright.dev/docs/api/class-browser#browser-new-context |
 | 11 | GitHub Pages 官方 actions | 已查證（版本差異待查） | 最新主版本為 `actions/upload-pages-artifact@v5`、`actions/deploy-pages@v5`、`actions/configure-pages@v6`；權限需 `pages: write`、`id-token: write`，job 需設 `environment: github-pages`。各主版本的不相容變更尚未閱讀，階段 7 動工前確認 | https://github.com/actions/upload-pages-artifact/releases 、 https://github.com/actions/deploy-pages/releases 、 https://github.com/actions/configure-pages/releases |
-| 12 | Uvicorn 代理標頭 | 已查證 | `--proxy-headers` 預設開啟，但只信任 `--forwarded-allow-ips` 列出的來源（預設 `127.0.0.1`、`::1`）；設成 `*` 時 `client.host` 取 `X-Forwarded-For` **最左邊**的值，這個值客戶端可以偽造。Uvicorn **不讀** `X-Real-IP`。與第 4 項合併的影響見 Q-RD-02 | https://github.com/encode/uvicorn/blob/master/docs/settings.md 、 https://github.com/encode/uvicorn/blob/master/uvicorn/middleware/proxy_headers.py |
-| 13 | Railway 在沒有設定檔時如何決定啟動指令與 Python 版本 | 待查證 | 與 Q-RD-01 相關；SA 回覆後於階段 2 查證 | — |
+| 12 | Uvicorn 代理標頭 | 已查證 | `--proxy-headers` 預設開啟，但只信任 `--forwarded-allow-ips` 列出的來源（預設 `127.0.0.1`、`::1`）；設成 `*` 時 `client.host` 取 `X-Forwarded-For` **最左邊**的值，這個值客戶端可以偽造。Uvicorn **不讀** `X-Real-IP`。因此依 D-24 由程式自行讀取 `X-Real-IP`，不依賴 Uvicorn 的代理標頭處理 | https://github.com/encode/uvicorn/blob/master/docs/settings.md 、 https://github.com/encode/uvicorn/blob/master/uvicorn/middleware/proxy_headers.py |
+| 13 | Railway 在沒有設定檔時如何指定 Python 3.12 與啟動指令 | 待查證 | 依 D-23，啟動指令與健康檢查在介面填寫；Python 版本的指定方式（例如版本檔）於階段 2 查證後寫進 PR 與 DEPLOY_GUIDE | — |
 | 14 | LINE 內建瀏覽器的 WebGL 支援與 `prefers-reduced-motion` 支援 | 待查證 | 無官方資料；WebGL 退路（FR-02）本來就要實作，SA 實機驗證時一併確認 | — |
 
 ---
@@ -373,7 +382,26 @@
 
 依 CLAUDE.md §3.2 列出 SRS 與 DECISIONS 都沒涵蓋、或彼此有衝突的地方。每條都附選項，**標「建議」的是 RD 預設**；SA 回覆前，受影響的部分不動工。
 
-### Q-RD-01 Railway `railway.toml` 已無法用於新服務 〔阻擋：階段 2 的部署設定、階段 7〕
+**回覆狀態**（2026-10-30 SA 回覆 PR #1）：已回覆的疑問保留原文供追溯，實作一律以對應的 D 條目為準。
+
+| 疑問 | 狀態 | 依據／回覆時機 |
+|---|---|---|
+| Q-RD-01 | 已回覆 | D-23 |
+| Q-RD-02 | 已回覆 | D-24 |
+| Q-RD-03 | 已回覆 | D-25 |
+| Q-RD-04 | 待回覆 | 階段 3 開工前 |
+| Q-RD-05 | 待回覆 | 階段 7 開工前 |
+| Q-RD-06 | 已回覆 | D-18（修訂） |
+| Q-RD-07 | 已回覆 | D-19（修訂） |
+| Q-RD-08 | 已回覆 | D-20（補充） |
+| Q-RD-09 | 已回覆 | D-26 |
+| Q-RD-10 | 已回覆 | D-27 |
+| Q-RD-11 | 待回覆 | 階段 3 開工前 |
+| Q-RD-12 | 待回覆 | 階段 3 開工前 |
+| Q-RD-13 | 待回覆 | 階段 4 開工前 |
+| Q-RD-14 | 待回覆 | 階段 4 開工前 |
+
+### Q-RD-01 Railway `railway.toml` 已無法用於新服務 〔✅ 已回覆 → D-23〕
 
 - **衝突**：CLAUDE.md §4 規定使用 `api/railway.toml`，並在 Railway 介面填 `/api/railway.toml`。依 §5 第 5a 項，新服務已不能啟用 Config as Code，既有檔案也將於 2026-12-01 停止讀取。
 - **選項**
@@ -382,7 +410,7 @@
   - **C**：在 `api/` 放 Dockerfile 固定 Python 3.12 與啟動指令，健康檢查等設定仍在介面填寫。可以和 A 一起使用。
 - **另需**：同意後更新 CLAUDE.md §4 的 Railway 那一列。
 
-### Q-RD-02 NFR-S3 的來源 IP 判斷方式（D-22-d 查證結果） 〔阻擋：階段 2 的 NFR-S3〕
+### Q-RD-02 NFR-S3 的來源 IP 判斷方式（D-22-d 查證結果） 〔✅ 已回覆 → D-24〕
 
 - **結論**：Railway 官方只記載 `X-Real-IP`，沒有說明是否覆寫客戶端自帶的標頭；Uvicorn 不讀 `X-Real-IP`，而改信任 `X-Forwarded-For` 會取到可偽造的最左值（§5 第 4、12 項）。
 - **選項**
@@ -390,7 +418,7 @@
   - **B**：Uvicorn 設 `--forwarded-allow-ips='*'` 並使用 `X-Forwarded-For`，同樣需要部署後實測格式。
   - **C**：不分 IP，改成全域計數。最安全，但任何人亂試都會把管理者鎖住 10 分鐘，與 NFR-S3「同一來源 IP」的文字不符。
 
-### Q-RD-03 失敗次數的計算方式（NFR-S3、AC-09） 〔阻擋：階段 2〕
+### Q-RD-03 失敗次數的計算方式（NFR-S3、AC-09） 〔✅ 已回覆 → D-25〕
 
 - **問題**：「10 分鐘內失敗 5 次 → 429」沒有說明是「第 5 次失敗就回 429」還是「失敗 5 次後的下一次回 429」；也沒有說明封鎖期間送出**正確**密語是否放行，以及哪些端點要計數。
 - **選項**
@@ -412,33 +440,33 @@
   - **A（建議）**：觸發路徑加上 `api/seasons.config.json`，並同步更新 CLAUDE.md §4。
   - **B**：維持現狀，改設定檔後由 SA 手動執行 `workflow_dispatch`，寫在 DEPLOY_GUIDE。
 
-### Q-RD-06 回放的「其他任何按鍵＝下一則」與鍵盤操作（D-18 與 §8.4） 〔階段 6〕
+### Q-RD-06 回放的「其他任何按鍵＝下一則」與鍵盤操作（D-18 與 §8.4） 〔✅ 已回覆 → D-18 修訂〕
 
 - **衝突**：照字面實作的話，Tab（移動焦點到「✕ 結束」等按鈕）、Shift、Ctrl＋R 等快捷鍵、在按鈕上按 Enter，都會被當成「下一則」，鍵盤使用者無法操作控制列，與 §8.4 衝突。
 - **選項**
   - **A（建議）**：以下按鍵不算「其他任何按鍵」：Tab、單獨的修飾鍵（Shift、Ctrl、Alt、Meta）、帶有 Ctrl／Alt／Meta 的組合鍵、焦點在控制列按鈕上時的 Enter。其餘照 D-18。
   - **B**：照字面實作。
 
-### Q-RD-07 回放期間頁尾與免責聲明（D-19 與 §2-4、FR-13） 〔階段 6〕
+### Q-RD-07 回放期間頁尾與免責聲明（D-19 與 §2-4、FR-13） 〔✅ 已回覆 → D-19 修訂〕
 
 - **衝突**：D-19 回放期間只保留標題、主角、天數、對話框、控制列，等於頁尾也隱藏；§2-4 規定頁尾必須有免責聲明，FR-13 只要求隱藏「提了」與管理功能。
 - **選項**
   - **A（建議）**：回放期間保留頁尾的免責聲明與時間來源標示，只隱藏頁尾的 🔑；CRT 與音效開關保留。
   - **B**：照 D-19 字面，連頁尾一起隱藏。
 
-### Q-RD-08 已完結時 AC-24 的驗收方式（D-20 與 AC-24） 〔階段 6〕
+### Q-RD-08 已完結時 AC-24 的驗收方式（D-20 與 AC-24） 〔✅ 已回覆 → D-20 補充〕
 
 - **衝突**：AC-24 寫「依日期順序播出每一筆記錄」，D-20 規定完結日之後的記錄不播。
 - **處理**：依「衝突時以 DECISIONS 為準」，AC-24 驗收時改為「播出完結日（含）以前的每一筆」。請 SA 確認這個解讀。
 
-### Q-RD-09 DELETE 的日期檢查（§7.6） 〔階段 2〕
+### Q-RD-09 DELETE 的日期檢查（§7.6） 〔✅ 已回覆 → D-26〕
 
 - **問題**：§7.6 只寫「季別或記錄不存在回 404」，沒有說明日期格式錯誤、或日期超出範圍時的回應。
 - **選項**
   - **A（建議）**：格式錯誤→422 `INVALID_DATE`；格式正確就不檢查範圍，沒有記錄→404。這樣日後若調整 `startDate`，範圍外的舊記錄仍刪得掉。
   - **B**：比照 PUT，超出範圍也回 422。
 
-### Q-RD-10 今天早於起始日的季別（§4.2、AC-32） 〔階段 2、3〕
+### Q-RD-10 今天早於起始日的季別（§4.2、AC-32） 〔✅ 已回覆 → D-27〕
 
 - **問題**：若 `seasons.config.json` 預先加入一個 `startDate` 在未來的季別，§4.2 公式會算出負數。本次只會在測試中出現，但需要定義。
 - **選項**
@@ -509,7 +537,7 @@
 | C-14 | Part 4（整節） | **沒有提到副本數必須為 1** | D-22-f；Railway 官方：「Replicas cannot be used with volumes」（§5 第 5 項） | RD／階段 7 |
 | C-15 | Part 4 | 沒有提到「有 Volume 的服務重新部署時會短暫停機」，SA 驗收 AC-07 時可能誤以為故障 | §5 第 5 項 | RD／階段 7 |
 | C-16 | Part 5-1 | **只列 `VITE_API_BASE`，缺 `VITE_SITE_URL`** | D-13 | RD／階段 7 |
-| C-17 | Part 4-2、Part 2-3、Part 8 | 要求填 Config File `/api/railway.toml`，並以 `api/railway.toml` 作為開發完成的判斷依據；但新服務已不能啟用 Config as Code，既有檔案也只讀到 2026-12-01 | §5 第 5a 項；Q-RD-01 | RD／階段 7（依 Q-RD-01 回覆的方案改寫；CLAUDE.md §4、SRS §3.2 的 `railway.toml` 也需 SA 一併決定是否修改） |
+| C-17 | Part 4-2、Part 2-3、Part 8 | 要求填 Config File `/api/railway.toml`，並以 `api/railway.toml` 作為開發完成的判斷依據；但新服務已不能啟用 Config as Code，既有檔案也只讀到 2026-12-01 | §5 第 5a 項；D-23 | RD／階段 7（刪除 Config File 步驟與 Part 8 對應列；Part 2-3 的完成判斷移除 `railway.toml`。CLAUDE.md §4 已於階段 0 修改；SRS §3.2 的 repo 結構仍列有 `railway.toml`，由 SA 決定是否在下一版 SRS 修改） |
 | C-18 | Part 1-2 | 教學用 `git config --global` 設定真實帳號名與 Email；與 D-02「repo 層級的不具名設定」方向不同（repo 層級設定會蓋過 global，所以不會出錯，但教學內容與決策不一致） | D-02 | RD／階段 7（補上 repo 層級設定的步驟與檢查指令） |
 | C-19 | Part 0 | 寫「commit 紀錄會顯示你的 GitHub 帳號名稱」；依 D-02，commit 作者為不具名，會露出的是網址、PR、合併操作上的帳號名稱 | D-02 | RD／階段 7（改寫說明） |
 | C-20 | Part 1-2、Part 3、Part 7 | 指令只有 bash 寫法；`railway volume files download` 等指令在 PowerShell 下的寫法未說明 | D-14 | RD／階段 7（需要時補 PowerShell 版） |
@@ -519,3 +547,5 @@
 | C-24 | Part 6 驗收清單 | 沒有 AC-07「重新部署 Railway 後記錄不消失」的步驟；AC-05、06、07 規劃由 SA 部署後手動驗證 | §10、本文件 §3.6 | RD／階段 7（補上對應 AC 編號與操作步驟） |
 | C-25 | Part 4-7 | 開啟 Serverless 時，喚醒後第一個請求可能回 502 | §5 第 5c 項 | 不需修正教學；前端在 FR-11 的 15 秒內自動重試（階段 3）。階段 7 在教學補一句說明 |
 | C-26 | Part 3 | `secrets.token_urlsafe(18)` 產生 24 字元，符合 NFR-S1 的 ≥ 16 字元 | NFR-S1 | 一致，不需修正 |
+| C-27 | Part 4-2～4-4 | 依 D-23，Railway 的所有設定都在介面填寫：Root Directory `/api`、啟動指令（監聽 `$PORT`）、健康檢查路徑 `/api/health`、Volume 掛載 `/data`、副本數 1。現有教學缺啟動指令與健康檢查的填寫步驟 | D-23 | RD／階段 7（逐項寫出介面位置與填寫值，和 C-14 合併處理） |
+| C-28 | Part 6 或新增小節 | 依 D-24 的部署後實測（6 次錯誤密語、每次偽造不同 `X-Real-IP`，第 6 次須為 429）的步驟與結果 | D-24 | RD／階段 7（實測後寫入；若標頭可被偽造，停下來回報 SA，不先寫教學） |

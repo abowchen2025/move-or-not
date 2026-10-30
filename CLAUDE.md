@@ -72,7 +72,7 @@
 | 字型 | 俐方體 11 號（Cubic 11，OFL 1.1），woff2 放 `web/public/fonts/`，附上授權檔 `OFL.txt`；字級用 12px 的整數倍 |
 | 後端 | `api/`：Python 3.12、FastAPI、Uvicorn、Pydantic v2、`tzdata` |
 | 資料 | `${DATA_DIR}/seasons/<seasonId>.json`、`${DATA_DIR}/audit.jsonl`；季別設定在 `api/seasons.config.json`；原子寫入（暫存檔 → fsync → `os.replace`） |
-| Railway | Root Directory 為 `/api`；設定檔用 `api/railway.toml`（Railway 介面上要填絕對路徑 `/api/railway.toml`）；健康檢查 `/api/health`；啟動指令監聽 `$PORT` |
+| Railway | 在 Railway 介面設定，詳見 `docs/DEPLOY_GUIDE.md` |
 | Pages 部署 | `.github/workflows/deploy-pages.yml`：`main` 有 `web/**` 變更時建置並部署（使用官方 `actions/upload-pages-artifact`、`actions/deploy-pages`），也要支援手動觸發 `workflow_dispatch`；建置時讀 repo variable `VITE_API_BASE` |
 | 測試 | 後端 `pytest`（含時間凍結測試）；前端 `vitest`（日期計算、狀態判斷）；`Playwright` 做一條端到端煙霧測試 |
 | 格式 | 前端 ESLint + Prettier；後端 Ruff |
