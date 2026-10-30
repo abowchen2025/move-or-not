@@ -1,0 +1,15 @@
+{
+  "description": "天數計算的共用案例（SRS §4.2、§4.4、D-27）。nowUtc 為輸入的瞬間，taipeiToday 為該瞬間的台灣日期。前後端測試都讀這份檔案。",
+  "cases": [
+    { "name": "起始日 00:00", "nowUtc": "2026-10-12T16:00:00Z", "taipeiToday": "2026-10-13", "startDate": "2026-10-13", "countInclusive": false, "endedDate": null, "expectedDays": 0 },
+    { "name": "起始日 23:59:59", "nowUtc": "2026-10-13T15:59:59Z", "taipeiToday": "2026-10-13", "startDate": "2026-10-13", "countInclusive": false, "endedDate": null, "expectedDays": 0 },
+    { "name": "AC-01 跨日前一秒", "nowUtc": "2026-10-30T15:59:59Z", "taipeiToday": "2026-10-30", "startDate": "2026-10-13", "countInclusive": false, "endedDate": null, "expectedDays": 17 },
+    { "name": "AC-01 跨日當下", "nowUtc": "2026-10-30T16:00:00Z", "taipeiToday": "2026-10-31", "startDate": "2026-10-13", "countInclusive": false, "endedDate": null, "expectedDays": 18 },
+    { "name": "含當天", "nowUtc": "2026-10-30T02:00:00Z", "taipeiToday": "2026-10-30", "startDate": "2026-10-13", "countInclusive": true, "endedDate": null, "expectedDays": 18 },
+    { "name": "完結日凍結（補記過去日期）", "nowUtc": "2026-11-05T02:00:00Z", "taipeiToday": "2026-11-05", "startDate": "2026-10-13", "countInclusive": false, "endedDate": "2026-11-03", "expectedDays": 21 },
+    { "name": "完結日凍結且含當天", "nowUtc": "2026-11-05T02:00:00Z", "taipeiToday": "2026-11-05", "startDate": "2026-10-13", "countInclusive": true, "endedDate": "2026-11-03", "expectedDays": 22 },
+    { "name": "跨年", "nowUtc": "2026-12-31T16:00:00Z", "taipeiToday": "2027-01-01", "startDate": "2026-10-13", "countInclusive": false, "endedDate": null, "expectedDays": 80 },
+    { "name": "D-27 起始日在未來", "nowUtc": "2026-10-30T02:00:00Z", "taipeiToday": "2026-10-30", "startDate": "2026-11-01", "countInclusive": false, "endedDate": null, "expectedDays": 0 },
+    { "name": "D-27 起始日在未來且含當天", "nowUtc": "2026-10-30T02:00:00Z", "taipeiToday": "2026-10-30", "startDate": "2026-11-01", "countInclusive": true, "endedDate": null, "expectedDays": 0 }
+  ]
+}

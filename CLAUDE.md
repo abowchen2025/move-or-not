@@ -115,20 +115,53 @@ PixiJS 官方有提供給 AI 代理用的 skills（GitHub：`pixijs/pixijs-skill
 
 ## 8. 本機開發
 
-以下是預期的啟動方式；實作後若指令不同，請更新本節與 README。
+需要 Python 3.12 與 Node.js 24（版本見 `api/.python-version`、`.nvmrc`）。前端的 API 位址寫在 `web/.env.local`（D-14），兩種終端機都用同一份檔案。實作後若指令不同，請更新本節與 README。
+
+**bash（macOS／Linux／Git Bash）**
 
 ```bash
 # 後端
 cd api
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+python3.12 -m venv .venv && source .venv/bin/activate   # Git Bash 為 .venv/Scripts/activate
+pip install -r requirements-dev.txt
 cp .env.example .env   # 填入本機測試用密語
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000 --env-file .env
 
 # 前端（另一個終端機）
 cd web
 npm install
-VITE_API_BASE=http://localhost:8000 npm run dev
+cp .env.example .env.local
+npm run dev
 ```
 
-本機的 `ALLOWED_ORIGINS` 需包含 `http://localhost:5173`。
+**Windows PowerShell**
+
+```powershell
+# 後端
+cd api
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt
+Copy-Item .env.example .env   # 填入本機測試用密語
+uvicorn app.main:app --reload --port 8000 --env-file .env
+
+# 前端（另一個終端機）
+cd web
+npm install
+Copy-Item .env.example .env.local
+npm run dev
+```
+
+本機的 `ALLOWED_ORIGINS` 需包含 `http://localhost:5173`。`--env-file` 需要 `requirements-dev.txt` 裡的 `python-dotenv`。
+
+**送 PR 前的檢查**
+
+```bash
+bash scripts/check-ac30.sh
+DEID_KEYWORDS_FILE=/repo/以外/的/清單.txt bash scripts/check-deid.sh   # 先在 web/ 執行 npm run build
+```
+
+```powershell
+.\scripts\check-ac30.ps1
+$env:DEID_KEYWORDS_FILE = 'C:epo以外\的\清單.txt'; .\scripts\check-deid.ps1   # 先在 web\ 執行 npm run build
+```

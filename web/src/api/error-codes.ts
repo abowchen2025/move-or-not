@@ -1,0 +1,15 @@
+/** API 錯誤代碼（SRS §7.8、D-15）。 */
+export const API_ERROR_CODES = [
+  'UNAUTHORIZED',
+  'TOO_MANY_ATTEMPTS',
+  'SEASON_NOT_FOUND',
+  'RECORD_NOT_FOUND',
+  'INVALID_DATE',
+  'EXECUTED_REQUIRES_PROPOSED',
+  'NOTE_TOO_LONG',
+  'DATA_FILE_ERROR',
+  'INVALID_REQUEST',
+  'INTERNAL_ERROR',
+] as const;
+
+export type ApiErrorCode = (typeof API_ERROR_CODES)[number];

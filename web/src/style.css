@@ -1,0 +1,59 @@
+/* 階段 1 骨架樣式；像素字型、對話視窗與完整色票在階段 3 加入（SRS §9.2）。 */
+:root {
+  --bg-dark: #0b0f2a;
+  --bg-light: #2a1f5c;
+  --text: #f8f8f8;
+  --accent: #f8d850;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: linear-gradient(180deg, var(--bg-dark), var(--bg-light));
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: system-ui, sans-serif;
+}
+
+#app {
+  max-width: 720px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.title {
+  margin: 24px 0;
+  font-size: 36px;
+  text-align: center;
+}
+
+@media (min-width: 600px) {
+  .title {
+    font-size: 48px;
+  }
+}
+
+.loading {
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.footer {
+  margin-top: auto;
+  font-size: 12px;
+  text-align: center;
+}
