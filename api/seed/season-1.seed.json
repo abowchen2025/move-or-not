@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "seasonId": "season-1",
+  "records": [
+    {
+      "date": "2026-10-13",
+      "proposed": true,
+      "executed": false,
+      "note": "起始日",
+      "updatedAt": "2026-10-13T18:00:00+08:00"
+    },
+    {
+      "date": "2026-10-23",
+      "proposed": true,
+      "executed": false,
+      "note": "颱風假",
+      "updatedAt": "2026-10-23T18:00:00+08:00"
+    },
+    {
+      "date": "2026-10-28",
+      "proposed": true,
+      "executed": false,
+      "note": "主管、管理部、總經理喬不攏",
+      "updatedAt": "2026-10-28T18:00:00+08:00"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "seasons": [
+    {
+      "id": "season-1",
+      "startDate": "2026-10-13",
+      "countInclusive": false,
+      "seedFile": "seed/season-1.seed.json"
+    }
+  ]
+}
