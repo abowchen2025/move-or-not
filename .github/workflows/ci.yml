@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: web（lint、型別、vitest、build、check-deid）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+      # CI 沒有關鍵字清單，去識別化比對會自動略過；機密與 .env 兩項照常執行
+      - name: check-deid
+        working-directory: .
+        run: bash scripts/check-deid.sh
+
+  api:
+    name: api（ruff、pytest）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version-file: api/.python-version
+          cache: pip
+          cache-dependency-path: api/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check .
+      - run: ruff format --check .
+      - name: pytest（TZ=UTC）
+        run: pytest
+        env:
+          TZ: UTC
+      - name: pytest（TZ=America/Los_Angeles，主機時區不同仍正確）
+        run: pytest
+        env:
+          TZ: America/Los_Angeles
+
+  checks-bash:
+    name: AC-30 檢查（bash）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash scripts/check-ac30.sh
+      # 確認腳本遇到主題字詞時真的會失敗，避免腳本壞掉卻永遠通過
+      - name: AC-30 腳本自我測試
+        run: |
+          printf 'export const probe = "\xe6\x90\xac";\n' > web/src/__ac30_probe.ts
+          if bash scripts/check-ac30.sh; then
+            echo "AC-30 腳本應該失敗卻通過" >&2
+            exit 1
+          fi
+          rm web/src/__ac30_probe.ts
+
+  checks-powershell:
+    name: AC-30 與 check-deid（Windows PowerShell 5.1）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: check-ac30.ps1
+        shell: powershell
+        run: |
+          ./scripts/check-ac30.ps1
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: check-deid.ps1
+        shell: powershell
+        run: |
+          ./scripts/check-deid.ps1
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: AC-30 腳本自我測試
+        shell: powershell
+        run: |
+          [IO.File]::WriteAllText('web/src/__ac30_probe.ts', "export const probe = '" + [char]0x642C + "';`n")
+          ./scripts/check-ac30.ps1
+          if ($LASTEXITCODE -eq 0) { Write-Error 'AC-30 腳本應該失敗卻通過'; exit 1 }
+          Remove-Item web/src/__ac30_probe.ts
+          exit 0

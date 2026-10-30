@@ -311,7 +311,7 @@
 
 ### 4.3 vitest（前端）
 
-- **時區**：`vitest.config.ts` 以多個 project 分別在 `TZ=Asia/Taipei`、`America/Los_Angeles`、`Pacific/Kiritimati`（UTC+14）下執行時間相關測試（設定方式見 §5 查證項目 9）。
+- **時區**：`npm run test` 由 `web/scripts/test-tz.mjs` 依序在 `TZ=Asia/Taipei`、`America/Los_Angeles`、`Pacific/Kiritimati`（UTC+14）下各啟動一次 vitest；`src/environment.test.ts` 斷言時區確實生效（階段 1 已實測，見 §5 第 9 項）。
 - **時鐘**：`vi.useFakeTimers()`＋`vi.setSystemTime()` 控制 `Date.now()`；offset 計算以「伺服器時間 − 本機時間」案例驗證（含本機快一天、慢一天）。
 - **§4 對應**：
   - §4.1-3：設定本機時間比 `serverNow` 快 24 小時，天數與今天仍取伺服器值（AC-03 單元層）。
@@ -369,12 +369,13 @@
 | 6a | Vite 環境變數與 `.env.local`（D-14） | 已查證 | 只有 `VITE_` 前綴會進 `import.meta.env`；`.env.local` 在所有模式都會載入，但**不會自動被 git 忽略**，需自行在 `.gitignore` 加入 `*.local`；行程環境變數優先順序最高（CI 可直接設定） | https://vite.dev/guide/env-and-mode |
 | 7 | LINE 分享預覽讀取 og 標籤的行為（FR-12、AC-15） | 部分查證 | 官方 FAQ 只說明 LINE 以 `og:title`、`og:description`、`og:image` 產生預覽，缺少時改用 `<title>` 等。圖片尺寸、是否需要絕對網址、快取時間、是否理會 `noindex`、官方快取刷新工具**均無官方說明**（過去流傳的刷新工具網域今天查詢無法解析）。**做法**：一律用絕對網址（D-13）、1200×630（FR-12）；預覽快取問題以網址加查詢參數因應。最終由 SA 在 LINE 實機驗證（AC-15） | https://developers.line.biz/en/faq/tags/line-app/ |
 | 8 | Windows PowerShell 5.1 讀取無 BOM 的 UTF-8 腳本 | 已查證 | 沒有 BOM 時會以系統 ANSI 字碼頁解讀腳本，中文字會變亂碼。**做法**：`.ps1` 一律存成 UTF-8 with BOM（`.editorconfig` 設定），關鍵字以 Unicode 碼位表示（§4.6） | https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_character_encoding?view=powershell-5.1 |
-| 9 | Node／Vitest 指定時區 | 部分查證 | Vitest 最新 5.0.5（peer 依賴 `vite ^6.4.0 || ^7.0.0 || ^8.0.0`，與 Vite 8 相容）。Node 文件：執行期設定 `process.env.TZ` 會生效，POSIX 自 v13.0.0、Windows 自 v16.2.0 起支援。Vitest 沒有時區選項（issue #1575 以 not planned 關閉）；有使用者回報 `test.env` 設定太晚、無效，在 `globalSetup` 設定則有效（社群回報，非官方）。**做法**：每個時區一個 Vitest project，以 `globalSetup` 設定 `TZ`，並加一條斷言測試確認 `getTimezoneOffset()` 符合預期，避免設定失效卻沒發現。階段 1 實測 | https://nodejs.org/api/cli.html#tz 、 https://github.com/vitest-dev/vitest/issues/1575 |
+| 9 | Node／Vitest 指定時區 | 已實測（階段 1） | Vitest 5.0.5 沒有時區選項（issue #1575）。**採用做法**：不使用 `globalSetup` 或 project，改由 `web/scripts/test-tz.mjs` 在啟動 vitest **之前**以環境變數 `TZ` 指定時區，每個時區各跑一次。Windows（Node 24.22.2）與 Linux 都會生效，由 `src/environment.test.ts` 比對 `Intl` 解析出的時區與 `getTimezoneOffset()` 驗證 | https://github.com/vitest-dev/vitest/issues/1575 、 https://nodejs.org/api/cli.html#tz |
 | 10 | Playwright `timezoneId`、Clock、`reducedMotion` | 已查證 | Clock 自 v1.45 起提供（`@playwright/test` 最新 1.64.1），會接管 `Date`、`setTimeout`、`setInterval`、`requestAnimationFrame`、`performance` 等；方法有 `install`、`setFixedTime`、`pauseAt`、`fastForward`、`runFor`、`resume`。`timezoneId` 與 `reducedMotion: 'reduce'` 為 context 選項 | https://playwright.dev/docs/clock 、 https://playwright.dev/docs/api/class-browser#browser-new-context |
 | 11 | GitHub Pages 官方 actions | 已查證（版本差異待查） | 最新主版本為 `actions/upload-pages-artifact@v5`、`actions/deploy-pages@v5`、`actions/configure-pages@v6`；權限需 `pages: write`、`id-token: write`，job 需設 `environment: github-pages`。各主版本的不相容變更尚未閱讀，階段 7 動工前確認 | https://github.com/actions/upload-pages-artifact/releases 、 https://github.com/actions/deploy-pages/releases 、 https://github.com/actions/configure-pages/releases |
 | 12 | Uvicorn 代理標頭 | 已查證 | `--proxy-headers` 預設開啟，但只信任 `--forwarded-allow-ips` 列出的來源（預設 `127.0.0.1`、`::1`）；設成 `*` 時 `client.host` 取 `X-Forwarded-For` **最左邊**的值，這個值客戶端可以偽造。Uvicorn **不讀** `X-Real-IP`。因此依 D-24 由程式自行讀取 `X-Real-IP`，不依賴 Uvicorn 的代理標頭處理 | https://github.com/encode/uvicorn/blob/master/docs/settings.md 、 https://github.com/encode/uvicorn/blob/master/uvicorn/middleware/proxy_headers.py |
 | 13 | Railway 在沒有設定檔時如何指定 Python 3.12 與啟動指令 | 待查證 | 依 D-23，啟動指令與健康檢查在介面填寫；Python 版本的指定方式（例如版本檔）於階段 2 查證後寫進 PR 與 DEPLOY_GUIDE | — |
 | 14 | LINE 內建瀏覽器的 WebGL 支援與 `prefers-reduced-motion` 支援 | 待查證 | 無官方資料；WebGL 退路（FR-02）本來就要實作，SA 實機驗證時一併確認 | — |
+| 15 | 工具鏈版本相容性（階段 1） | 已查證 | ESLint 9 已於 2026-08-06 停止維護；ESLint 10 需要 Node `^20.19.0 \|\| ^22.13.0 \|\| >=24`，SA 已將本機升級至 Node 24.22.2，`.nvmrc` 與 CI 用 24。typescript-eslint 8.72 的 peer 依賴為 `typescript >=4.8.4 <6.1.0`，因此 TypeScript 使用 6.0.x，不用 7.x。Starlette 1.10 的 TestClient 建議以 `httpx2` 取代 `httpx` | https://eslint.org/version-support 、 https://registry.npmjs.org/typescript-eslint/latest |
 
 ---
 

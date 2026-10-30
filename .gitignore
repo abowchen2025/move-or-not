@@ -1,0 +1,27 @@
+# 機密與本機設定（NFR-S7）
+.env
+.env.*
+!.env.example
+*.local
+
+# Node
+node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# 本機資料（DATA_DIR 預設 ./data）
+data/
+
+# 編輯器與系統
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

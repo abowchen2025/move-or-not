@@ -1,0 +1,108 @@
+{
+  "description": "備註驗證的共用案例（SRS §5.1、D-09、D-15）。expected 為 OK 或錯誤代碼；normalized 為去頭尾空白後的值；codePoints 為 Unicode code point 數。頭尾含換行等控制字元的情況尚未定案，暫不列入。",
+  "cases": [
+    {
+      "name": "空字串",
+      "input": "",
+      "expected": "OK",
+      "normalized": "",
+      "codePoints": 0
+    },
+    {
+      "name": "去頭尾半形空白",
+      "input": "  abc  ",
+      "expected": "OK",
+      "normalized": "abc",
+      "codePoints": 3
+    },
+    {
+      "name": "去頭尾全形空白",
+      "input": "　abc　",
+      "expected": "OK",
+      "normalized": "abc",
+      "codePoints": 3
+    },
+    {
+      "name": "剛好 100 字",
+      "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expected": "OK",
+      "normalized": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "codePoints": 100
+    },
+    {
+      "name": "101 字",
+      "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expected": "NOTE_TOO_LONG"
+    },
+    {
+      "name": "去空白後剛好 100 字",
+      "input": " aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ",
+      "expected": "OK",
+      "normalized": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "codePoints": 100
+    },
+    {
+      "name": "中文 100 字",
+      "input": "字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字",
+      "expected": "OK",
+      "normalized": "字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字字",
+      "codePoints": 100
+    },
+    {
+      "name": "emoji 100 個（UTF-16 為 200 單位）",
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "expected": "OK",
+      "normalized": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "codePoints": 100
+    },
+    {
+      "name": "emoji 101 個",
+      "input": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "expected": "NOTE_TOO_LONG"
+    },
+    {
+      "name": "組合字 50 組（100 個 code point）",
+      "input": "éééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "expected": "OK",
+      "normalized": "éééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "codePoints": 100
+    },
+    {
+      "name": "組合字 51 組（102 個 code point）",
+      "input": "ééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "expected": "NOTE_TOO_LONG"
+    },
+    {
+      "name": "中間含換行",
+      "input": "ab\ncd",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "中間含 CR",
+      "input": "ab\rcd",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "中間含 Tab",
+      "input": "ab\tcd",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "含 NUL",
+      "input": "ab\u0000cd",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "含 DEL",
+      "input": "abcd",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "HTML 標籤照原樣保存",
+      "input": "<script>alert(1)</script>",
+      "expected": "OK",
+      "normalized": "<script>alert(1)</script>",
+      "codePoints": 25
+    }
+  ]
+}
