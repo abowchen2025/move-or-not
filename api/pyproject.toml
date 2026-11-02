@@ -1,7 +1,5 @@
-[project]
-name = "api"
-version = "0.1.0"
-requires-python = ">=3.12,<3.13"
+# 只放工具設定，不是可安裝的專案：Railway 一律用 requirements.txt 安裝依賴（D-29）
+# Python 版本見 .python-version
 
 [tool.ruff]
 target-version = "py312"

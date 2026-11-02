@@ -15,11 +15,13 @@ from pydantic import (
     field_validator,
 )
 
+from app.settings import StartupError
+
 SEASON_ID_PATTERN = r"^[a-z0-9-]+$"
 DATE_PATTERN = r"^\d{4}-\d{2}-\d{2}$"
 
 
-class SeasonsConfigError(ValueError):
+class SeasonsConfigError(StartupError):
     """設定檔不存在、格式錯誤或內容不合規則。"""
 
 
