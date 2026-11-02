@@ -1,5 +1,5 @@
 {
-  "description": "備註驗證的共用案例（SRS §5.1、D-09、D-15）。expected 為 OK 或錯誤代碼；normalized 為去頭尾空白後的值；codePoints 為 Unicode code point 數。頭尾含換行等控制字元的情況尚未定案，暫不列入。",
+  "description": "備註驗證的共用案例（SRS §5.1、D-09、D-15、D-28）。expected 為 OK 或錯誤代碼；normalized 為去頭尾空白後的值；codePoints 為 Unicode code point 數。D-28：只要含換行或控制字元（Unicode Cc、Zl、Zp 類別）就是 INVALID_REQUEST，不論位置；去頭尾空白只去掉一般空白字元（Unicode Zs 類別，含全形空白與 U+00A0），U+FEFF 等格式字元（Cf）不算空白。",
   "cases": [
     {
       "name": "空字串",
@@ -103,6 +103,84 @@
       "expected": "OK",
       "normalized": "<script>alert(1)</script>",
       "codePoints": 25
+    },
+    {
+      "name": "D-28 開頭換行",
+      "input": "\nabc",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "D-28 結尾換行",
+      "input": "abc\n",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "D-28 結尾 CRLF",
+      "input": "abc\r\n",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "D-28 頭尾 Tab",
+      "input": "\tabc\t",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "D-28 只有換行",
+      "input": "\n",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "D-28 空白夾著換行",
+      "input": "  \n  ",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "D-28 全形空白後接換行",
+      "input": "abc　\n",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "D-28 中間含 U+2028 行分隔字元",
+      "input": "ab cd",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "D-28 結尾 U+2029 段落分隔字元",
+      "input": "abc ",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "D-28 結尾 NEL（U+0085）",
+      "input": "abc",
+      "expected": "INVALID_REQUEST"
+    },
+    {
+      "name": "只有空白",
+      "input": "   ",
+      "expected": "OK",
+      "normalized": "",
+      "codePoints": 0
+    },
+    {
+      "name": "頭尾 U+00A0 不換行空白會去掉",
+      "input": " abc ",
+      "expected": "OK",
+      "normalized": "abc",
+      "codePoints": 3
+    },
+    {
+      "name": "U+FEFF 不算空白，保留並計入字數",
+      "input": "﻿abc",
+      "expected": "OK",
+      "normalized": "﻿abc",
+      "codePoints": 4
+    },
+    {
+      "name": "emoji 組合序列的 ZWJ 保留",
+      "input": "👨‍👩‍👧",
+      "expected": "OK",
+      "normalized": "👨‍👩‍👧",
+      "codePoints": 5
     }
   ]
 }
