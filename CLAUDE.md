@@ -154,6 +154,8 @@ npm run dev
 
 本機的 `ALLOWED_ORIGINS` 需包含 `http://localhost:5173`。`--env-file` 需要 `requirements-dev.txt` 裡的 `python-dotenv`。
 
+修改 `api/seasons.config.json` 後，前端 dev server 要重新啟動（`npm run dev`），退路模式用的季別日期才會更新（D-04）；後端 uvicorn 也要重新啟動，才會讀到新的季別設定並建立新季別的資料檔。
+
 **送 PR 前的檢查**
 
 ```bash
@@ -163,5 +165,5 @@ DEID_KEYWORDS_FILE=/repo/以外/的/清單.txt bash scripts/check-deid.sh   # �
 
 ```powershell
 .\scripts\check-ac30.ps1
-$env:DEID_KEYWORDS_FILE = 'C:epo以外\的\清單.txt'; .\scripts\check-deid.ps1   # 先在 web\ 執行 npm run build
+$env:DEID_KEYWORDS_FILE = 'C:\repo以外\的\清單.txt'; .\scripts\check-deid.ps1   # 先在 web\ 執行 npm run build
 ```
