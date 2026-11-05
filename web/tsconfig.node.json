@@ -15,5 +15,12 @@
     "allowImportingTsExtensions": true,
     "skipLibCheck": true
   },
-  "include": ["vite.config.ts", "build", "src/**/*.test.ts", "src/virtual-modules.d.ts"]
+  "include": [
+    "vite.config.ts",
+    "playwright.config.ts",
+    "build",
+    "e2e",
+    "src/**/*.test.ts",
+    "src/virtual-modules.d.ts"
+  ]
 }
