@@ -20,7 +20,8 @@ test.describe('AC-18 API 連不上', () => {
   }) => {
     const api = new MockApi(NOW);
     api.down = true;
-    await openPage(page, api, { browserNow: NOW, waitFor: 'none' });
+    // 時鐘暫停：15 秒的邊界只由 runFor 決定，不受機器負載影響
+    await openPage(page, api, { browserNow: NOW, waitFor: 'none', paused: true });
 
     await expect(page.locator('.loading')).toHaveText(story.loading);
     await page.clock.runFor(14_000);
