@@ -4,3 +4,6 @@ node_modules/
 package-lock.json
 test-results/
 playwright-report/
+# 產圖腳本（tools/gen-images.mjs）的產出，保持腳本輸出的原樣（D-16）
+public/sprites/
+e2e/fixtures/

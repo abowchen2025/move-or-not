@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getStory } from '../stories';
 import type { Snapshot } from '../sync/controller';
 import { makeState, record, taipei } from '../testing/fixtures';
-import { buildViewModel } from './model';
+import { buildViewModel, DEFAULT_UI } from './model';
 import { createView } from './render';
 
 const story = getStory('season-1')!;
@@ -100,13 +100,15 @@ describe('畫面結構', () => {
     render(ready());
     expect(root.querySelector('select, nav, [role="tablist"], [role="listbox"]')).toBeNull();
     expect(root.querySelectorAll('a[href*="season"]')).toHaveLength(0);
-    // 畫面上的按鈕只有「提了」與頁尾的管理入口，沒有切換季別的按鈕
+    // 畫面上的按鈕只有「提了」、頁尾的 CRT／音效開關（階段 5）與管理入口，沒有切換季別的按鈕
     const shown = [...root.querySelectorAll<HTMLButtonElement>('button')].filter(
       (b) => !b.closest('[hidden]'),
     );
-    expect(shown.map((b) => b.textContent)).toEqual([
+    expect(shown.map((b) => b.getAttribute('aria-label') ?? b.textContent)).toEqual([
       story.actions.propose,
-      story.common.adminEntryIcon,
+      story.common.toggles.crt,
+      story.common.toggles.sound,
+      story.common.adminEntryLabel,
     ]);
   });
 });
@@ -148,7 +150,7 @@ describe('FR-11 讀取中與錯誤', () => {
 describe('FR-06、FR-08 操作按鈕', () => {
   function renderWith(
     handlers: Parameters<typeof createView>[1],
-    ui = { admin: false, notice: null, adminMessage: null },
+    ui = { ...DEFAULT_UI, admin: false, notice: null, adminMessage: null },
   ) {
     const view = createView(root, handlers);
     view.render(buildViewModel(ready([record('2026-10-28', true, false, 'n')]), story, ui));
@@ -174,7 +176,7 @@ describe('FR-06、FR-08 操作按鈕', () => {
   it('管理模式：每列的編輯／刪除帶日期；資料沒變時不重建列（焦點不會被換掉）', () => {
     const edit = vi.fn();
     const remove = vi.fn();
-    const ui = { admin: true, notice: null, adminMessage: null };
+    const ui = { ...DEFAULT_UI, admin: true, notice: null, adminMessage: null };
     const view = renderWith({ edit, remove }, ui);
     const editButton = root.querySelector<HTMLButtonElement>('[data-action="edit"]')!;
     expect(editButton.dataset.date).toBe('2026-10-28');
@@ -191,6 +193,7 @@ describe('FR-06、FR-08 操作按鈕', () => {
     const view = createView(root, {});
     view.render(
       buildViewModel(ready([record('2026-10-28', true, false, HOSTILE[0]!)]), story, {
+        ...DEFAULT_UI,
         admin: true,
         notice: null,
         adminMessage: null,

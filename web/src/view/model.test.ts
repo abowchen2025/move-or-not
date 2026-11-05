@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getStory } from '../stories';
 import { makeState, record, taipei } from '../testing/fixtures';
 import type { Snapshot } from '../sync/controller';
-import { buildViewModel } from './model';
+import { buildViewModel, DEFAULT_UI } from './model';
 
 const story = getStory('season-1')!;
 const { common } = story;
@@ -258,9 +258,7 @@ describe('FR-05、FR-06 「提了」按鈕', () => {
 
   it('補記提示來自畫面狀態', () => {
     const notice = story.menu.backfillDone({ date: '10/29（四）' });
-    expect(
-      buildViewModel(ready(), story, { admin: false, notice, adminMessage: null }).today?.notice,
-    ).toBe(notice);
+    expect(buildViewModel(ready(), story, { ...DEFAULT_UI, notice }).today?.notice).toBe(notice);
   });
 });
 
@@ -275,7 +273,12 @@ describe('FR-08、FR-09 管理模式與 🔑', () => {
   });
 
   it('管理模式：記錄表上方有新增／下載備份／登出，每列有編輯／刪除；🔑 隱藏', () => {
-    const model = buildViewModel(ready(), story, { admin: true, notice: null, adminMessage: 'x' });
+    const model = buildViewModel(ready(), story, {
+      ...DEFAULT_UI,
+      admin: true,
+      notice: null,
+      adminMessage: 'x',
+    });
     expect(model.records?.admin).toEqual({
       label: common.adminMode,
       add: common.addRecord,

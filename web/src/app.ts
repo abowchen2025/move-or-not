@@ -3,12 +3,15 @@
  * - 「提了」選單與管理模式只在資料載入完成（ready）時可用。
  * - 管理模式的入口：頁尾 🔑，或網址 #admin（進站時與 hashchange 時）。
  * - 寫入成功後立即重新抓 state（FR-06）。
+ * - 完結演出（§4.4、D-21）、CRT 與音效開關（§9.1、D-12）、按鈕與跳數字音效。
  */
 import type { AdminApi } from './api/client';
+import type { SoundBoard } from './audio/sound';
 import type { PassphraseStore } from './auth/session';
 import type { AppConfig } from './config';
 import { writableRange } from './records/validate';
 import type { StoryConfig } from './stories/types';
+import { EndingDirector, type EndingMode } from './stage/director';
 import type { Snapshot, SyncController } from './sync/controller';
 import type { ServerClock } from './time/server-clock';
 import { taipeiDate } from './time/taipei';
@@ -16,7 +19,7 @@ import { openRecordForm } from './view/dialog/record-form';
 import { domPrompts } from './view/dialog/prompts';
 import { formatMonthDay } from './view/format';
 import { openProposeMenu } from './view/menu/propose-menu';
-import { buildViewModel, type UiState } from './view/model';
+import { buildViewModel, DEFAULT_UI, type UiState } from './view/model';
 import type { View, ViewHandlers } from './view/render';
 import {
   deleteRecord,
@@ -37,13 +40,23 @@ export interface AppOptions {
   clock: ServerClock;
   config: Pick<AppConfig, 'writeTimeoutMs' | 'noticeMs'>;
   storyFor: (seasonId: string) => StoryConfig;
+  /** 音效；沒有時不顯示音效開關 */
+  sound?: SoundBoard;
+  /** 是否開啟減少動態效果（完結演出改為直接顯示完結畫面，D-21） */
+  reducedMotion?: () => boolean;
+}
+
+/** 播放完結演出的對象（stage/stage.ts 的 StageHandle） */
+export interface EndingTarget {
+  playEnding(mode: EndingMode): Promise<void>;
+  restore(): void;
 }
 
 export interface App {
   handlers: ViewHandlers;
   /** 同步狀態改變時呼叫 */
   update(snapshot: Snapshot): void;
-  attach(view: View, controller: SyncController): void;
+  attach(view: View, controller: SyncController, stage?: EndingTarget): void;
 }
 
 /** 對話框的結果 → 選單／表單需要的值：null＝成功、'cancelled'＝取消、其他＝錯誤訊息 */
@@ -53,12 +66,13 @@ function outcome(result: WriteResult): string | null | 'cancelled' {
 }
 
 export function createApp(options: AppOptions): App {
-  const { window: win, api, store, clock, config } = options;
+  const { window: win, api, store, clock, config, sound } = options;
   const doc = win.document;
   let view: View | null = null;
   let controller: SyncController | null = null;
   let snapshot: Snapshot | null = null;
-  const ui: UiState = { admin: false, notice: null, adminMessage: null };
+  let stage: EndingTarget | null = null;
+  const ui: UiState = { ...DEFAULT_UI, soundSupported: sound?.supported ?? false };
   let noticeTimer: ReturnType<typeof setTimeout> | undefined;
   let busy = false;
 
@@ -138,8 +152,38 @@ export function createApp(options: AppOptions): App {
     });
   }
 
+  const director = new EndingDirector({
+    play: (mode) => stage?.playEnding(mode) ?? Promise.resolve(),
+    restore: () => stage?.restore(),
+    onShown: (shown) => setUi({ endingShown: shown }),
+    reduced: () => options.reducedMotion?.() ?? false,
+  });
+
+  // 按鈕音效（音效開啟時）
+  doc.addEventListener(
+    'click',
+    (event) => {
+      if (event.target instanceof Element && event.target.closest('button')) {
+        sound?.play(story().audio.button);
+      }
+    },
+    true,
+  );
+
   const handlers: ViewHandlers = {
     retry: () => void controller?.retry(),
+
+    toggleCrt: () => setUi({ crt: !ui.crt }),
+
+    toggleSound: () => {
+      const on = !ui.sound;
+      // 在點擊事件中建立／恢復 AudioContext（自動播放限制）
+      sound?.setEnabled(on);
+      setUi({ sound: on });
+      if (on) sound?.play(story().audio.button);
+    },
+
+    daysJumped: () => sound?.play(story().audio.countUp),
 
     propose: () =>
       void exclusive(async () => {
@@ -248,14 +292,17 @@ export function createApp(options: AppOptions): App {
 
   return {
     handlers,
-    attach(v, c) {
+    attach(v, c, s) {
       view = v;
       controller = c;
+      stage = s ?? null;
     },
     update(next) {
       const first = snapshot === null;
       snapshot = next;
       render();
+      // 完結與否只在讀取成功時確定；讀取中、退路模式維持原狀
+      director.update(next.kind === 'ready' ? next.state.ended : null);
       // #admin：進站後立即要求密語（FR-08）
       if (first) onHash();
     },

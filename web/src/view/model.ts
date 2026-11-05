@@ -25,9 +25,20 @@ export interface RecordRow {
   note: string;
 }
 
+export interface ToggleModel {
+  label: string;
+  /** 目前狀態的文字（開／關） */
+  state: string;
+  pressed: boolean;
+}
+
 export interface ViewModel {
   documentTitle: string;
   title: string;
+  /** 完結畫面的「— 全劇終 —」（§4.4、D-21）；完結演出結束前為 null */
+  theEnd: string | null;
+  /** CRT 掃描線是否開啟（§9.1、D-12） */
+  crt: boolean;
   /** 讀取中文案；不是讀取中時為 null */
   loading: string | null;
   /** 讀取失敗的訊息與重試按鈕（FR-11） */
@@ -71,6 +82,8 @@ export interface ViewModel {
     syncWarning: string | null;
     /** 頁尾的 🔑 管理入口（FR-09）；管理模式中或資料未載入時不顯示 */
     adminEntry: { icon: string; label: string } | null;
+    /** CRT 與音效開關（§9.1、D-12）；音效在瀏覽器不支援時為 null */
+    toggles: { crt: ToggleModel; sound: ToggleModel | null };
   };
 }
 
@@ -79,9 +92,29 @@ export interface UiState {
   admin: boolean;
   notice: string | null;
   adminMessage: string | null;
+  /** 完結演出已結束、顯示完結畫面（D-21） */
+  endingShown: boolean;
+  /** CRT 預設開（§9.1）；音效預設關（D-12）；都不保存 */
+  crt: boolean;
+  sound: boolean;
+  /** 瀏覽器是否支援 Web Audio */
+  soundSupported: boolean;
 }
 
-const DEFAULT_UI: UiState = { admin: false, notice: null, adminMessage: null };
+export const DEFAULT_UI: UiState = {
+  admin: false,
+  notice: null,
+  adminMessage: null,
+  endingShown: false,
+  crt: true,
+  sound: false,
+  soundSupported: true,
+};
+
+function toggle(label: string, on: boolean, story: StoryConfig): ToggleModel {
+  const { toggles } = story.common;
+  return { label, state: on ? toggles.on : toggles.off, pressed: on };
+}
 
 function recordRows(records: readonly RecordDto[], story: StoryConfig): RecordRow[] {
   const { common } = story;
@@ -121,6 +154,8 @@ export function buildViewModel(
   const base: ViewModel = {
     documentTitle: story.meta.documentTitle,
     title: story.title,
+    theEnd: ui.endingShown ? story.ending.theEnd : null,
+    crt: ui.crt,
     loading: null,
     alert: null,
     status: null,
@@ -132,6 +167,10 @@ export function buildViewModel(
       clockNotice: null,
       syncWarning: null,
       adminEntry: null,
+      toggles: {
+        crt: toggle(common.toggles.crt, ui.crt, story),
+        sound: ui.soundSupported ? toggle(common.toggles.sound, ui.sound, story) : null,
+      },
     },
   };
   const recordsBase = {

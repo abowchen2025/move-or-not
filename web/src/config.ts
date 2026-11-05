@@ -18,6 +18,27 @@ export const appConfig = {
   writeTimeoutMs: 15_000,
   /** 「已補記 MM/DD（週X）」等提示顯示多久（FR-06） */
   noticeMs: 5_000,
+  /** 主角與背景（FR-02、§9.1、§8.2、D-11）；與季別有關的數值在劇本與 sprite 描述檔 */
+  stage: {
+    /** 減少動態效果時，主角透明度呼吸的週期與最低透明度（FR-02） */
+    breath: { periodMs: 4_000, minAlpha: 0.55 },
+    /** 每 10 萬 CSS 平方像素的星星與粒子數量（§8.2：依螢幕大小調整），以及上限 */
+    starsPer100k: 34,
+    maxStars: 420,
+    motesPer100k: 4,
+    maxMotes: 48,
+    /** 三層星空的水平漂移速度（CSS 像素／秒）與捲動視差倍率 */
+    layerSpeeds: [2, 5, 10],
+    layerParallax: [0.04, 0.1, 0.2],
+    /** 粒子往上飄的速度範圍（CSS 像素／秒） */
+    moteSpeed: [6, 14],
+    /** 星星閃爍的週期範圍 */
+    twinkleMs: [1_200, 3_600],
+    /** D-11：減少動態效果時「減弱」的倍率（速度、數量、閃爍幅度） */
+    reduced: { speed: 0.25, count: 0.5, twinkle: 0.3 },
+    /** 跑道上下預留的空間（邏輯像素），讓完結演出往上升時不碰到下方區塊 */
+    trackPadding: 2,
+  },
 } as const;
 
 export type AppConfig = typeof appConfig;

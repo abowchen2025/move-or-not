@@ -26,11 +26,14 @@ test('AC-10 備註含 HTML 或 script 時只顯示為文字，不會執行', asy
 test.describe('AC-33 季別（只有一季）', () => {
   const noSeasonPicker = async (page: import('@playwright/test').Page) => {
     await expect(page.locator('select, nav, [role="tablist"], [role="listbox"]')).toHaveCount(0);
-    // 畫面上的按鈕只有「提了」與頁尾的管理入口（階段 4），沒有切換季別的按鈕
+    // 畫面上的按鈕只有「提了」、頁尾的 CRT／音效開關（階段 5）與管理入口（階段 4），
+    // 沒有切換季別的按鈕
     const buttons = page.getByRole('button');
-    await expect(buttons).toHaveCount(2);
+    await expect(buttons).toHaveCount(4);
     await expect(buttons.nth(0)).toHaveText(story.actions.propose);
-    await expect(buttons.nth(1)).toHaveAccessibleName(story.common.adminEntryLabel);
+    await expect(buttons.nth(1)).toHaveAccessibleName(story.common.toggles.crt);
+    await expect(buttons.nth(2)).toHaveAccessibleName(story.common.toggles.sound);
+    await expect(buttons.nth(3)).toHaveAccessibleName(story.common.adminEntryLabel);
   };
 
   test('未提供 ?season= → 最新一季', async ({ page }) => {

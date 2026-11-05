@@ -1,0 +1,118 @@
+{
+  "frames": {
+    "move-0": {
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 20
+      },
+      "sourceSize": {
+        "w": 24,
+        "h": 20
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 20
+      }
+    },
+    "move-1": {
+      "frame": {
+        "x": 24,
+        "y": 0,
+        "w": 24,
+        "h": 20
+      },
+      "sourceSize": {
+        "w": 24,
+        "h": 20
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 20
+      }
+    },
+    "move-2": {
+      "frame": {
+        "x": 48,
+        "y": 0,
+        "w": 24,
+        "h": 20
+      },
+      "sourceSize": {
+        "w": 24,
+        "h": 20
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 20
+      }
+    },
+    "idle-0": {
+      "frame": {
+        "x": 72,
+        "y": 0,
+        "w": 24,
+        "h": 20
+      },
+      "sourceSize": {
+        "w": 24,
+        "h": 20
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 20
+      }
+    },
+    "idle-1": {
+      "frame": {
+        "x": 96,
+        "y": 0,
+        "w": 24,
+        "h": 20
+      },
+      "sourceSize": {
+        "w": 24,
+        "h": 20
+      },
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 20
+      }
+    }
+  },
+  "animations": {
+    "move": ["move-0", "move-1", "move-2"],
+    "idle": ["idle-0", "idle-1"]
+  },
+  "meta": {
+    "image": "ghost.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 120,
+      "h": 20
+    },
+    "scale": "1",
+    "character": {
+      "scale": {
+        "mobile": 1,
+        "desktop": 2
+      },
+      "tripMs": 3000,
+      "frameMs": {
+        "move": 200,
+        "idle": 400
+      }
+    }
+  }
+}

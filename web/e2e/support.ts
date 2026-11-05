@@ -165,12 +165,14 @@ export async function openPage(
     waitFor?: 'ready' | 'none';
     /** true：時鐘在載入前就暫停，之後只隨 runFor 前進（不受機器負載影響） */
     paused?: boolean;
+    /** page.goto 等到哪個事件（字型延遲回應時 load 事件不會發生） */
+    waitUntil?: 'load' | 'domcontentloaded';
   },
 ): Promise<void> {
   await page.clock.install({ time: options.browserNow });
   if (options.paused) await page.clock.pauseAt(options.browserNow + 1_000);
   await api.install(page);
-  await page.goto(options.path ?? '');
+  await page.goto(options.path ?? '', { waitUntil: options.waitUntil ?? 'load' });
   if ((options.waitFor ?? 'ready') === 'ready') {
     await page.locator('#today:not([hidden])').waitFor();
   }

@@ -521,3 +521,258 @@ body {
 .command:focus-visible {
   outline-offset: -3px;
 }
+
+/* ---------------------------------------------------------------- 階段 5：主角、背景、CRT、音效 */
+
+/* FR-02 主角跑道：高度依 sprite 描述檔（stage/stage.ts 設定 --track-units 與倍率） */
+.ghost-track {
+  --sprite-scale: var(--sprite-scale-mobile, 2);
+  position: relative;
+  height: calc(var(--track-units, 24) * var(--sprite-scale) * 1px);
+}
+
+:root[data-layout='desktop'] .ghost-track {
+  --sprite-scale: var(--sprite-scale-desktop, 3);
+}
+
+/* §4.4、D-21 完結畫面 */
+.the-end {
+  margin: 0 0 var(--gap);
+  color: var(--accent);
+  font-size: var(--fs-days-label);
+}
+
+/* PixiJS 的 canvas：鋪滿視窗、在 DOM 後面當背景層（FR-02 建議） */
+.stage-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+/* FR-02 WebGL／WebGPU 不可用時的 CSS 退路（stage/css-stage.ts）：同一張 sprite sheet */
+.css-ghost {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: calc(var(--sprite-w) * var(--sprite-scale) * 1px);
+  height: calc(var(--sprite-h) * var(--sprite-scale) * 1px);
+  margin-top: calc(var(--sprite-h) * var(--sprite-scale) * -0.5px);
+  transform: translateX(var(--ghost-center, 0px));
+  animation: css-ghost-move var(--cycle-ms) linear var(--cycle-delay) infinite;
+}
+
+.css-ghost.is-fixed {
+  animation: none;
+}
+
+.css-ghost.is-gone {
+  visibility: hidden;
+}
+
+.css-ghost-fx,
+.css-ghost-float,
+.css-ghost-sprite {
+  width: 100%;
+  height: 100%;
+}
+
+.css-ghost-float {
+  animation: css-ghost-float var(--float-ms) ease-in-out infinite alternate;
+}
+
+.css-ghost-sprite {
+  background-repeat: no-repeat;
+  background-size: calc(var(--sheet-w) * var(--sprite-scale) * 1px)
+    calc(var(--sheet-h) * var(--sprite-scale) * 1px);
+  image-rendering: pixelated;
+  /* animation-name 由程式依影格產生：轉向、影格 */
+  animation-duration: var(--cycle-ms), var(--frames-move-ms);
+  animation-delay: var(--cycle-delay), 0s;
+  animation-timing-function: step-end, step-end;
+  animation-iteration-count: infinite;
+}
+
+.css-ghost.is-fixed .css-ghost-sprite {
+  transform: none !important;
+}
+
+@keyframes css-ghost-move {
+  0% {
+    transform: translateX(var(--ghost-min));
+  }
+  50% {
+    transform: translateX(var(--ghost-max));
+  }
+  100% {
+    transform: translateX(var(--ghost-min));
+  }
+}
+
+/* 圖檔朝右；往左走的那半段左右翻轉 */
+@keyframes css-ghost-face {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(-1);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes css-ghost-float {
+  from {
+    transform: translateY(calc(var(--float-from) * var(--sprite-scale) * 1px));
+  }
+  to {
+    transform: translateY(calc(var(--float-to) * var(--sprite-scale) * 1px));
+  }
+}
+
+@keyframes ghost-breath {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* §4.4 完結演出 purify 的 CSS 版：發光、上升、淡出 */
+.css-ghost-fx.ending-purify {
+  animation: ending-purify var(--ending-ms) ease-out forwards;
+}
+
+@keyframes ending-purify {
+  0% {
+    opacity: 1;
+    filter: none;
+    transform: translateY(0);
+  }
+  35% {
+    opacity: 1;
+    filter: brightness(1.5) drop-shadow(0 0 4px #fff8c0);
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 0;
+    filter: brightness(2) drop-shadow(0 0 12px #f8d850);
+    transform: translateY(-12px) scale(1.25);
+  }
+}
+
+/* FR-03 跳數字：天數改變時跳一下（減少動態效果時不播放） */
+.days-value.is-jumping {
+  animation: days-jump 480ms steps(6, end);
+}
+
+@keyframes days-jump {
+  0% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-0.35em);
+  }
+  60% {
+    transform: translateY(0);
+  }
+  80% {
+    transform: translateY(-0.1em);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* §9.1、D-12 頁尾的 CRT 與音效開關 */
+.toggles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px var(--gap);
+  margin-top: 6px !important;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 3px 6px;
+  border: 2px solid var(--window-border);
+  border-radius: 3px;
+  background: var(--window-bottom);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.toggle[aria-pressed='true'] .toggle-state {
+  color: var(--accent);
+}
+
+.toggle:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* §9.1 CRT 掃描線：蓋在畫面上、不攔截點擊；捲動的亮帶為 CRT 動態 */
+.crt-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(180deg, rgb(0 0 0 / 18%) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 60%, rgb(0 0 0 / 25%) 100%);
+}
+
+.crt-overlay::after {
+  position: absolute;
+  top: -20%;
+  right: 0;
+  left: 0;
+  height: 20%;
+  content: '';
+  background: linear-gradient(180deg, transparent, rgb(255 255 255 / 5%), transparent);
+  animation: crt-roll 8s linear infinite;
+}
+
+@keyframes crt-roll {
+  to {
+    transform: translateY(600%);
+  }
+}
+
+/* FR-02、D-11：減少動態效果時，主角置中只保留透明度呼吸；其他動態「減弱」，跳數字不播放 */
+@media (prefers-reduced-motion: reduce) {
+  .css-ghost {
+    transform: translateX(var(--ghost-center, 0px));
+    animation: ghost-breath 4s ease-in-out infinite;
+  }
+
+  .css-ghost-float {
+    animation: none;
+  }
+
+  .css-ghost-sprite {
+    transform: none;
+    background-position: calc(var(--sprite-scale) * var(--idle-x) * 1px)
+      calc(var(--sprite-scale) * var(--idle-y) * 1px);
+    animation: none !important;
+  }
+
+  .days-value.is-jumping {
+    animation: none;
+  }
+
+  .crt-overlay::after {
+    animation-duration: 32s;
+  }
+}
