@@ -1,25 +1,36 @@
 import './style.css';
-import { latestFallbackSeasonId } from './season/fallback-seasons';
+import { createApiClient } from './api/client';
+import { appConfig } from './config';
+import { fallbackSeasons, latestFallbackSeasonId } from './season/fallback-seasons';
+import { requestedSeason, urlWithoutSeasonParam } from './season/resolve';
 import { getStory } from './stories';
+import { SyncController } from './sync/controller';
+import { ServerClock } from './time/server-clock';
+import { watchLayout } from './view/layout';
+import { buildViewModel } from './view/model';
+import { createView } from './view/render';
 
-// 階段 1 骨架：只顯示劇本中的標題與讀取中文案。季別解析與資料載入在階段 3 實作。
-const app = document.querySelector<HTMLDivElement>('#app');
-const story = getStory(latestFallbackSeasonId());
+const root = document.querySelector<HTMLElement>('#app');
+// 缺少劇本的季別（D-22-k）用打包清單中最新一季的劇本顯示錯誤畫面
+const defaultStory = getStory(latestFallbackSeasonId());
 
-if (app && story) {
-  document.title = story.meta.documentTitle;
+if (root && defaultStory) {
+  watchLayout(window, document.documentElement);
 
-  const title = document.createElement('h1');
-  title.className = 'title';
-  title.textContent = story.title;
-
-  const loading = document.createElement('p');
-  loading.className = 'loading';
-  loading.textContent = story.loading;
-
-  const disclaimer = document.createElement('footer');
-  disclaimer.className = 'footer';
-  disclaimer.textContent = story.disclaimer;
-
-  app.replaceChildren(title, loading, disclaimer);
+  const view = createView(root, () => void controller.retry());
+  const controller = new SyncController({
+    api: createApiClient(import.meta.env.VITE_API_BASE ?? ''),
+    clock: new ServerClock(),
+    localNow: () => Date.now(),
+    fallbackSeasons,
+    requestedSeason: requestedSeason(location.search),
+    hasStory: (seasonId) => getStory(seasonId) !== undefined,
+    dropSeasonParam: () =>
+      history.replaceState(history.state, '', urlWithoutSeasonParam(location.href)),
+    config: appConfig,
+    document,
+    onChange: (snapshot) =>
+      view.render(buildViewModel(snapshot, getStory(snapshot.seasonId) ?? defaultStory)),
+  });
+  controller.start();
 }
