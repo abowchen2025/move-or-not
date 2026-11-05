@@ -68,7 +68,7 @@
 
 ### 階段 5 — `feat/web-visual`：主角與視覺
 
-- **範圍**：FR-02、FR-03 跳數字、§9.1、§3.3 規則 2、§4.4 完結演出；D-11、D-12、D-16、D-21、D-22-i、j。
+- **範圍**：FR-02、FR-03 跳數字、§9.1、§3.3 規則 2、§4.4 完結演出；D-11、D-12、D-16、D-21、D-22-i、j；D-39 依 SA 回覆 PR #5 列入本階段（階段 4 已實作，本階段補 Playwright 量測，見 D-39 補註）。
 - **產出（預定）**：
   - `tools/`：一次性產圖腳本（ghost sprite sheet、og:image、favicon、AC-31 測試用的另一組尺寸不同的 sprite），產出 PNG 後 commit（D-16）。
   - `web/public/sprites/ghost.png`、`ghost.json`（PixiJS spritesheet 格式，自訂欄位放 `meta`，D-22-i）。
@@ -85,7 +85,7 @@
 
 ### 階段 7 — `feat/deploy`：部署與收尾
 
-- **範圍**：FR-12；Pages workflow；D-13、D-22-f、h、D-23（介面設定寫進 DEPLOY_GUIDE）、D-24（部署後實測，若標頭可偽造則停下回報）；端到端煙霧測試；README；DEPLOY_GUIDE 更新（SA 初版為基礎，依實作結果修改）；AC 總對照。
+- **範圍**：FR-12；Pages workflow；D-13、D-22-f、h、D-41（check-deid 排除網站網址）、D-23（介面設定寫進 DEPLOY_GUIDE）、D-24（部署後實測，若標頭可偽造則停下回報）；端到端煙霧測試；README；DEPLOY_GUIDE 更新（SA 初版為基礎，依實作結果修改）；AC 總對照。
 - **產出（預定）**：
   - `.github/workflows/deploy-pages.yml`（`main` 的 `web/**` 變更＋`workflow_dispatch`，讀 `VITE_API_BASE`、`VITE_SITE_URL`；觸發路徑待 Q-RD-05 回覆）。
   - 建置時把最新一季劇本的 `<title>`、`og:*` 寫入 `index.html`（D-22-h），og:image 用 `VITE_SITE_URL` 組成絕對網址（D-13）。
@@ -276,8 +276,10 @@
 | D-26 | 2 | py（格式錯 422 `INVALID_DATE`；範圍外但格式正確且有記錄→刪除成功；不存在→404 `RECORD_NOT_FOUND`） | — |
 | D-27 | 2、3 | py（未來起始日：`daysElapsed`＝0、PUT 422）＋vt（退路計算最小為 0） | — |
 | D-38 | 3 | CI（check-deid `.sh`／`.ps1` 自我測試） | — |
-| D-39 | 4 | vt（style.css 桌機字級） | RD（桌機截圖） |
+| D-39 | 4、5 | vt（style.css 桌機字級）＋pw（階段 5：實際量測桌機 24px、手機 12px、頁尾 12px） | RD（桌機截圖） |
 | D-40 | 4 | vt（PUT、DELETE、auth/check 不重試；GET 重試 502／503／504）＋pw | — |
+| D-41 | 7 | CI（check-deid `.sh`／`.ps1` 自我測試：網址完整值略過、其他位置命中仍失敗） | SA（以正式網址建置後執行 check-deid） |
+| D-42 | 4 | 已在 PR #5 驗證 | — |
 
 ---
 
@@ -387,7 +389,7 @@
 
 依 CLAUDE.md §3.2 列出 SRS 與 DECISIONS 都沒涵蓋、或彼此有衝突的地方。每條都附選項，**標「建議」的是 RD 預設**；SA 回覆前，受影響的部分不動工。
 
-**回覆狀態**（2026-10-30 SA 回覆 PR #1；2026-11-02 SA 回覆其餘疑問，見 D-31～D-36；2026-11-05 SA 新增 Q-RD-15，階段 7 前回覆）：已回覆的疑問保留原文供追溯，實作一律以對應的 D 條目為準。
+**回覆狀態**（2026-10-30 SA 回覆 PR #1；2026-11-02 SA 回覆其餘疑問，見 D-31～D-36；2026-11-05 SA 新增 Q-RD-15，同日於 PR #5 回覆，見 D-41）：已回覆的疑問保留原文供追溯，實作一律以對應的 D 條目為準。
 
 | 疑問 | 狀態 | 依據／回覆時機 |
 |---|---|---|
@@ -405,7 +407,7 @@
 | Q-RD-12 | 已回覆 | D-33 |
 | Q-RD-13 | 已回覆 | D-34 |
 | Q-RD-14 | 已回覆 | D-35 |
-| Q-RD-15 | **待回覆** | 階段 7 開工前 |
+| Q-RD-15 | 已回覆 | D-41（選項 A，階段 7 實作） |
 
 ### Q-RD-01 Railway `railway.toml` 已無法用於新服務 〔✅ 已回覆 → D-23〕
 
@@ -507,7 +509,7 @@
   - **A（建議）**：管理模式送出後若會讓季別進入完結（原本沒有完結、或完結日會變早），一樣要二次確認，沿用 FR-06 的確認文案。
   - **B**：管理模式不另外確認。
 
-### Q-RD-15 網站網址含關鍵字清單中的帳號名稱（D-13、CLAUDE.md §7、AC-16） 〔待回覆，階段 7 前〕
+### Q-RD-15 網站網址含關鍵字清單中的帳號名稱（D-13、CLAUDE.md §7、AC-16） 〔✅ 已回覆 → D-41〕
 
 - **問題**：網站網址 `https://<帳號>.github.io/move-or-not/` 的帳號名稱在 SA 的關鍵字清單裡。依 D-13，建置時把 `VITE_SITE_URL` 寫進 `og:url`、`og:image` 的絕對網址，`web/dist/index.html` 一定會讓 check-deid 命中。本機目前的 `web/.env.local` 是 `localhost`，所以現在不會命中；階段 7 用正式網址建置時才會出現。帳號名稱出現在網址中，D-02 已列為接受的限制。
 - **選項**
