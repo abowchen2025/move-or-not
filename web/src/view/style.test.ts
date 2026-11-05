@@ -75,3 +75,11 @@ describe('D-39 桌機的小字', () => {
     expect(block(":root[data-layout='desktop']")).not.toMatch(/--fs-small/);
   });
 });
+
+describe('指令選單的游標', () => {
+  it('▶ 以 CSS 跳脫字元表示，檔案中沒有控制字元', () => {
+    expect(css).toContain(String.raw`content: '\25B6' / '';`);
+    // eslint-disable-next-line no-control-regex
+    expect(css).not.toMatch(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/);
+  });
+});

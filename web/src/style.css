@@ -325,7 +325,6 @@ body {
 .pixel-button.tiny {
   min-width: 0;
   margin-top: 0;
-  font-size: var(--fs-small);
 }
 
 .pixel-button.tiny {
@@ -511,7 +510,7 @@ body {
 
 .command:focus::before,
 .command:hover::before {
-  content: 'B6' / '';
+  content: '\25B6' / '';
 }
 
 .command:disabled {
