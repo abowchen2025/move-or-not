@@ -30,6 +30,8 @@
   --fs-title: 36px;
   --fs-days-label: 24px;
   --fs-days-value: 48px;
+  /* FR-03 起算日說明、FR-04 KPI 小字（D-39：桌機 24px） */
+  --fs-note: 12px;
   --gap: 12px;
 }
 
@@ -37,6 +39,7 @@
   --fs-body: 24px;
   --fs-title: 48px;
   --fs-days-value: 72px;
+  --fs-note: 24px;
   --gap: 24px;
 }
 
@@ -199,7 +202,7 @@ body {
 
 .since,
 .quip {
-  font-size: var(--fs-small);
+  font-size: var(--fs-note);
 }
 
 .stats {
@@ -281,4 +284,241 @@ body {
 .clock-notice,
 .sync-warning {
   color: var(--accent);
+}
+
+/* FR-05 「提了」按鈕與補記提示（FR-06） */
+#today {
+  text-align: center;
+}
+
+.notice {
+  margin-top: var(--gap) !important;
+  color: var(--accent);
+}
+
+/* FR-08 管理模式 */
+.admin-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px var(--gap);
+  margin-bottom: var(--gap);
+}
+
+.admin-label {
+  color: var(--accent);
+}
+
+.admin-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-message {
+  flex-basis: 100%;
+  color: var(--accent);
+}
+
+.pixel-button.small,
+.pixel-button.tiny {
+  min-width: 0;
+  margin-top: 0;
+  font-size: var(--fs-small);
+}
+
+.pixel-button.tiny {
+  min-height: 44px;
+  padding: 3px 6px;
+  border-width: 2px;
+}
+
+.records-table .col-actions {
+  width: 4.5em;
+}
+
+.records-table .col-actions .pixel-button {
+  display: block;
+  width: 100%;
+}
+
+.records-table .col-actions .pixel-button + .pixel-button {
+  margin-top: 3px;
+}
+
+/* 手機：管理模式多一欄，日期欄縮窄讓備註仍有空間（360px 不得出現水平捲軸） */
+:root:not([data-layout='desktop']) .records-table.is-admin .col-date {
+  width: 5.5em;
+}
+
+/* FR-09 頁尾的 🔑：不顯眼，但仍有 44px 的點擊範圍 */
+.admin-entry {
+  min-width: 44px;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.admin-entry:hover,
+.admin-entry:focus-visible {
+  opacity: 1;
+}
+
+/* 焦點一律可見（§8.4） */
+.admin-entry:focus-visible,
+.command:focus-visible,
+.pixel-input:focus-visible,
+.radio input:focus-visible,
+[tabindex='-1']:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 對話框：與資訊區塊同一種 SNES 視窗 */
+.dialog {
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  overflow: auto;
+  color: var(--text);
+  font-size: var(--fs-body);
+}
+
+.dialog::backdrop {
+  background: rgb(11 15 42 / 70%);
+}
+
+.dialog .window-title {
+  position: static;
+  transform: none;
+  margin: 0 0 var(--gap);
+  padding: 0;
+  background: none;
+  color: var(--accent);
+}
+
+.dialog-message {
+  margin: 0 0 var(--gap);
+  overflow-wrap: anywhere;
+}
+
+.dialog-form {
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--gap);
+  margin: 0 0 var(--gap);
+  padding: 0;
+  border: 0;
+}
+
+.field label,
+.field legend {
+  min-width: 3em;
+  padding: 0;
+}
+
+.field legend {
+  float: left;
+  margin-right: var(--gap);
+}
+
+.pixel-input {
+  min-width: 0;
+  min-height: 44px;
+  flex: 1 1 10em;
+  padding: 6px;
+  border: 2px solid var(--window-border);
+  border-radius: 3px;
+  background: var(--bg-dark);
+  color: var(--text);
+  font: inherit;
+  color-scheme: dark;
+}
+
+.pixel-input[readonly] {
+  border-style: dashed;
+  opacity: 0.8;
+}
+
+.pixel-input::placeholder {
+  color: rgb(248 248 248 / 70%);
+}
+
+.date-text {
+  color: var(--accent);
+}
+
+.radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-right: var(--gap);
+  cursor: pointer;
+}
+
+.radio input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.dialog-error {
+  margin: 0 0 var(--gap);
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+/* SNES 指令選單：▶ 游標指向目前的選項 */
+.commands {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px var(--gap);
+}
+
+.command {
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 6px var(--gap) 6px calc(var(--gap) + 1em);
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.command::before {
+  position: absolute;
+  left: 6px;
+  content: '';
+  color: var(--accent);
+}
+
+.command:focus::before,
+.command:hover::before {
+  content: 'B6' / '';
+}
+
+.command:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.command:focus-visible {
+  outline-offset: -3px;
 }

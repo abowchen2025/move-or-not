@@ -58,6 +58,8 @@ export class SyncController {
   #requested: string | null;
   #failures = 0;
   #inFlight = false;
+  /** 抓取進行中又要求立即更新時，等這次結束後再抓一次 */
+  #queued = false;
   /** 已經為哪一個台灣日期觸發過跨日更新，避免每秒重複抓取 */
   #rolloverRequestedFor: string | null = null;
   #timers: ReturnType<typeof setInterval>[] = [];
@@ -94,6 +96,24 @@ export class SyncController {
   /** FR-11 的「重試」：顯示讀取中並重新載入。 */
   retry(): Promise<void> {
     return this.#load(true);
+  }
+
+  /**
+   * 寫入成功後呼叫（FR-06「送出成功後立即重新抓 /api/state」）。
+   * 正在抓取時，這次的結果可能早於寫入，因此排定結束後再抓一次。
+   */
+  refreshNow(): Promise<void> {
+    if (this.#inFlight) {
+      this.#queued = true;
+      return Promise.resolve();
+    }
+    return this.refresh();
+  }
+
+  #runQueued(): void {
+    if (!this.#queued) return;
+    this.#queued = false;
+    void this.refresh();
   }
 
   /** 定期更新、回到前景與跨日時呼叫。 */
@@ -144,6 +164,7 @@ export class SyncController {
       this.#enterFallback(error);
     } finally {
       this.#inFlight = false;
+      this.#runQueued();
     }
   }
 
@@ -167,6 +188,7 @@ export class SyncController {
       }
     } finally {
       this.#inFlight = false;
+      this.#runQueued();
     }
   }
 

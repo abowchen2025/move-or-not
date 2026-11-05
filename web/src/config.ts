@@ -14,6 +14,10 @@ export const appConfig = {
   retryDelayMs: 1_000,
   /** 初次讀取成功後，定期更新連續失敗幾次才切到錯誤畫面（D-06） */
   maxConsecutiveSyncFailures: 3,
+  /** 單次寫入、驗證、下載備份請求的逾時；不自動重試（D-40） */
+  writeTimeoutMs: 15_000,
+  /** 「已補記 MM/DD（週X）」等提示顯示多久（FR-06） */
+  noticeMs: 5_000,
 } as const;
 
 export type AppConfig = typeof appConfig;

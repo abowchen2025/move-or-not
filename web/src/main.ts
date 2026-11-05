@@ -1,5 +1,7 @@
 import './style.css';
+import { createApp } from './app';
 import { createApiClient } from './api/client';
+import { createPassphraseStore } from './auth/session';
 import { appConfig } from './config';
 import { fallbackSeasons, latestFallbackSeasonId } from './season/fallback-seasons';
 import { requestedSeason, urlWithoutSeasonParam } from './season/resolve';
@@ -7,7 +9,6 @@ import { getStory } from './stories';
 import { SyncController } from './sync/controller';
 import { ServerClock } from './time/server-clock';
 import { watchLayout } from './view/layout';
-import { buildViewModel } from './view/model';
 import { createView } from './view/render';
 
 const root = document.querySelector<HTMLElement>('#app');
@@ -17,10 +18,20 @@ const defaultStory = getStory(latestFallbackSeasonId());
 if (root && defaultStory) {
   watchLayout(window, document.documentElement);
 
-  const view = createView(root, () => void controller.retry());
+  const api = createApiClient(import.meta.env.VITE_API_BASE ?? '');
+  const clock = new ServerClock();
+  const app = createApp({
+    window,
+    api,
+    store: createPassphraseStore(() => window.sessionStorage),
+    clock,
+    config: appConfig,
+    storyFor: (seasonId) => getStory(seasonId) ?? defaultStory,
+  });
+  const view = createView(root, app.handlers);
   const controller = new SyncController({
-    api: createApiClient(import.meta.env.VITE_API_BASE ?? ''),
-    clock: new ServerClock(),
+    api,
+    clock,
     localNow: () => Date.now(),
     fallbackSeasons,
     requestedSeason: requestedSeason(location.search),
@@ -29,8 +40,8 @@ if (root && defaultStory) {
       history.replaceState(history.state, '', urlWithoutSeasonParam(location.href)),
     config: appConfig,
     document,
-    onChange: (snapshot) =>
-      view.render(buildViewModel(snapshot, getStory(snapshot.seasonId) ?? defaultStory)),
+    onChange: (snapshot) => app.update(snapshot),
   });
+  app.attach(view, controller);
   controller.start();
 }

@@ -66,7 +66,10 @@ describe('畫面結構', () => {
 
   it('FR-07 表頭、是／否附文字與顏色 class', () => {
     render(ready([record('2026-10-28', true, false, 'n')]));
-    expect([...root.querySelectorAll('thead th')].map((th) => th.textContent)).toEqual([
+    // 「操作」欄只在管理模式顯示
+    expect(
+      [...root.querySelectorAll('thead th:not([hidden])')].map((th) => th.textContent),
+    ).toEqual([
       story.recordTable.date,
       story.recordTable.proposed,
       story.recordTable.executed,
@@ -97,8 +100,14 @@ describe('畫面結構', () => {
     render(ready());
     expect(root.querySelector('select, nav, [role="tablist"], [role="listbox"]')).toBeNull();
     expect(root.querySelectorAll('a[href*="season"]')).toHaveLength(0);
-    expect(root.querySelectorAll('button')).toHaveLength(1);
-    expect(visible('button')).toBe(false);
+    // 畫面上的按鈕只有「提了」與頁尾的管理入口，沒有切換季別的按鈕
+    const shown = [...root.querySelectorAll<HTMLButtonElement>('button')].filter(
+      (b) => !b.closest('[hidden]'),
+    );
+    expect(shown.map((b) => b.textContent)).toEqual([
+      story.actions.propose,
+      story.common.adminEntryIcon,
+    ]);
   });
 });
 
@@ -133,5 +142,61 @@ describe('FR-11 讀取中與錯誤', () => {
     expect(retry?.textContent).toBe(story.common.retry);
     retry?.click();
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('FR-06、FR-08 操作按鈕', () => {
+  function renderWith(
+    handlers: Parameters<typeof createView>[1],
+    ui = { admin: false, notice: null, adminMessage: null },
+  ) {
+    const view = createView(root, handlers);
+    view.render(buildViewModel(ready([record('2026-10-28', true, false, 'n')]), story, ui));
+    return view;
+  }
+
+  it('按「提了」時把按鈕本身傳給處理函式（關閉選單後焦點回到這裡）', () => {
+    const propose = vi.fn();
+    renderWith({ propose });
+    const button = root.querySelector<HTMLButtonElement>('.propose-button')!;
+    expect(button.textContent).toBe(story.actions.propose);
+    button.click();
+    expect(propose).toHaveBeenCalledWith(button);
+  });
+
+  it('🔑 有無障礙名稱', () => {
+    renderWith({});
+    const entry = root.querySelector<HTMLButtonElement>('.admin-entry')!;
+    expect(entry.textContent).toBe(story.common.adminEntryIcon);
+    expect(entry.getAttribute('aria-label')).toBe(story.common.adminEntryLabel);
+  });
+
+  it('管理模式：每列的編輯／刪除帶日期；資料沒變時不重建列（焦點不會被換掉）', () => {
+    const edit = vi.fn();
+    const remove = vi.fn();
+    const ui = { admin: true, notice: null, adminMessage: null };
+    const view = renderWith({ edit, remove }, ui);
+    const editButton = root.querySelector<HTMLButtonElement>('[data-action="edit"]')!;
+    expect(editButton.dataset.date).toBe('2026-10-28');
+    editButton.click();
+    expect(edit).toHaveBeenCalledWith('2026-10-28', editButton);
+    root.querySelector<HTMLButtonElement>('[data-action="remove"]')!.click();
+    expect(remove).toHaveBeenCalledWith('2026-10-28', expect.any(HTMLButtonElement));
+    view.render(buildViewModel(ready([record('2026-10-28', true, false, 'n')]), story, ui));
+    expect(root.querySelector('[data-action="edit"]')).toBe(editButton);
+    expect(view.focusTargets.row('edit', '2026-10-28')).toBe(editButton);
+  });
+
+  it('備註在管理模式下同樣以文字輸出', () => {
+    const view = createView(root, {});
+    view.render(
+      buildViewModel(ready([record('2026-10-28', true, false, HOSTILE[0]!)]), story, {
+        admin: true,
+        notice: null,
+        adminMessage: null,
+      }),
+    );
+    expect(root.querySelector('tbody .col-note')?.textContent).toBe(HOSTILE[0]);
+    expect(root.querySelector('tbody script')).toBeNull();
   });
 });

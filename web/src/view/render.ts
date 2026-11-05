@@ -1,8 +1,23 @@
 /**
  * 把 ViewModel 輸出成 DOM。所有文字（含使用者輸入的備註）一律用 textContent（NFR-S6）。
- * 結構只建立一次，之後只更新內容，讓 aria-live 區塊能正常朗讀（§8.4）。
+ * 結構只建立一次，之後只更新內容，讓 aria-live 區塊能正常朗讀（§8.4）；
+ * 記錄表的內容沒有變時不重建，避免焦點所在的按鈕被換掉。
  */
 import type { RecordRow, ViewModel } from './model';
+
+/** 使用者操作；trigger 為觸發的元件，對話框關閉後焦點回到這裡（§8.4）。 */
+export interface ViewHandlers {
+  retry(): void;
+  propose(trigger: HTMLElement): void;
+  adminEntry(trigger: HTMLElement): void;
+  add(trigger: HTMLElement): void;
+  backup(trigger: HTMLElement): void;
+  logout(): void;
+  edit(date: string, trigger: HTMLElement): void;
+  remove(date: string, trigger: HTMLElement): void;
+}
+
+const noop = () => undefined;
 
 function el<K extends keyof HTMLElementTagNameMap>(
   doc: Document,
@@ -19,11 +34,20 @@ function setText(element: HTMLElement, text: string | null): void {
   element.hidden = text === null;
 }
 
+function button(doc: Document, className: string, onClick: (b: HTMLButtonElement) => void) {
+  const b = el(doc, 'button', className);
+  b.type = 'button';
+  b.addEventListener('click', () => onClick(b));
+  return b;
+}
+
 function windowSection(doc: Document, id: string): { section: HTMLElement; heading: HTMLElement } {
   const section = el(doc, 'section', 'window');
   section.id = id;
   const heading = el(doc, 'h2', 'window-title');
   heading.id = `${id}-title`;
+  // 對話框關閉時，原本的按鈕已不在畫面上的話，焦點改移到區塊標題（§8.4）
+  heading.tabIndex = -1;
   section.setAttribute('aria-labelledby', heading.id);
   section.append(heading);
   return { section, heading };
@@ -31,12 +55,34 @@ function windowSection(doc: Document, id: string): { section: HTMLElement; headi
 
 export interface View {
   render(model: ViewModel): void;
+  /** 對話框關閉後的焦點去處 */
+  focusTargets: {
+    propose: () => HTMLElement;
+    records: () => HTMLElement;
+    row: (action: 'edit' | 'remove', date: string) => HTMLElement | null;
+    adminEntry: () => HTMLElement;
+  };
 }
 
-export function createView(root: HTMLElement, onRetry: () => void): View {
+export function createView(
+  root: HTMLElement,
+  handlersOrRetry: Partial<ViewHandlers> | (() => void),
+): View {
+  const handlers: ViewHandlers = {
+    retry: noop,
+    propose: noop,
+    adminEntry: noop,
+    add: noop,
+    backup: noop,
+    logout: noop,
+    edit: noop,
+    remove: noop,
+    ...(typeof handlersOrRetry === 'function' ? { retry: handlersOrRetry } : handlersOrRetry),
+  };
   const doc = root.ownerDocument;
 
   const title = el(doc, 'h1', 'title');
+  title.tabIndex = -1;
   const loading = el(doc, 'p', 'loading');
   loading.setAttribute('role', 'status');
 
@@ -44,9 +90,7 @@ export function createView(root: HTMLElement, onRetry: () => void): View {
   alert.setAttribute('role', 'alert');
   const alertMessage = el(doc, 'p', 'alert-message');
   const alertDetail = el(doc, 'p', 'alert-detail');
-  const retry = el(doc, 'button', 'pixel-button');
-  retry.type = 'button';
-  retry.addEventListener('click', onRetry);
+  const retry = button(doc, 'pixel-button', () => handlers.retry());
   alert.append(alertMessage, alertDetail, retry);
 
   const status = windowSection(doc, 'status');
@@ -63,9 +107,26 @@ export function createView(root: HTMLElement, onRetry: () => void): View {
   const today = windowSection(doc, 'today');
   const todayText = el(doc, 'p', 'today-status');
   todayText.setAttribute('aria-live', 'polite');
-  today.section.append(todayText);
+  const propose = button(doc, 'pixel-button propose-button', (b) => handlers.propose(b));
+  const notice = el(doc, 'p', 'notice');
+  notice.setAttribute('role', 'status');
+  today.section.append(todayText, propose, notice);
 
   const records = windowSection(doc, 'records');
+  const adminBar = el(doc, 'div', 'admin-bar');
+  const adminLabel = el(doc, 'p', 'admin-label');
+  const adminMessage = el(doc, 'p', 'admin-message');
+  adminMessage.setAttribute('role', 'alert');
+  const addButton = button(doc, 'pixel-button small', (b) => handlers.add(b));
+  addButton.dataset.action = 'add';
+  const backupButton = button(doc, 'pixel-button small', (b) => handlers.backup(b));
+  backupButton.dataset.action = 'backup';
+  const logoutButton = button(doc, 'pixel-button small', () => handlers.logout());
+  logoutButton.dataset.action = 'logout';
+  const adminButtons = el(doc, 'div', 'admin-buttons');
+  adminButtons.append(addButton, backupButton, logoutButton);
+  adminBar.append(adminLabel, adminButtons, adminMessage);
+
   const table = el(doc, 'table', 'records-table');
   table.setAttribute('aria-labelledby', records.heading.id);
   const headRow = el(doc, 'tr');
@@ -75,19 +136,23 @@ export function createView(root: HTMLElement, onRetry: () => void): View {
     headRow.append(th);
     return [key, th] as const;
   });
+  const actionsHead = el(doc, 'th', 'col-actions');
+  actionsHead.scope = 'col';
+  headRow.append(actionsHead);
   const thead = el(doc, 'thead');
   thead.append(headRow);
   const tbody = el(doc, 'tbody');
   table.append(thead, tbody);
   const recordsMessage = el(doc, 'p', 'records-message');
-  records.section.append(table, recordsMessage);
+  records.section.append(adminBar, table, recordsMessage);
 
   const footer = el(doc, 'footer', 'footer');
   const disclaimer = el(doc, 'p', 'disclaimer');
   const lastUpdated = el(doc, 'p', 'last-updated');
   const clockNotice = el(doc, 'p', 'clock-notice');
   const syncWarning = el(doc, 'p', 'sync-warning');
-  footer.append(disclaimer, lastUpdated, clockNotice, syncWarning);
+  const adminEntry = button(doc, 'admin-entry', (b) => handlers.adminEntry(b));
+  footer.append(disclaimer, lastUpdated, clockNotice, syncWarning, adminEntry);
 
   const main = el(doc, 'main', 'content');
   main.append(loading, alert, status.section, today.section, records.section);
@@ -95,7 +160,7 @@ export function createView(root: HTMLElement, onRetry: () => void): View {
   header.append(title);
   root.replaceChildren(header, main, footer);
 
-  function row(record: RecordRow): HTMLTableRowElement {
+  function row(record: RecordRow, admin: NonNullable<ViewModel['records']>['admin']) {
     const tr = el(doc, 'tr');
     const date = el(doc, 'td', 'col-date');
     date.textContent = record.date;
@@ -109,10 +174,34 @@ export function createView(root: HTMLElement, onRetry: () => void): View {
     const note = el(doc, 'td', 'col-note');
     note.textContent = record.note;
     tr.append(date, yesNo(record.proposed, 'proposed'), yesNo(record.executed, 'executed'), note);
+    if (admin) {
+      const actions = el(doc, 'td', 'col-actions');
+      const edit = button(doc, 'pixel-button tiny', (b) => handlers.edit(record.key, b));
+      edit.textContent = admin.edit;
+      edit.dataset.action = 'edit';
+      edit.dataset.date = record.key;
+      edit.setAttribute('aria-label', `${admin.edit} ${record.date}`);
+      const remove = button(doc, 'pixel-button tiny', (b) => handlers.remove(record.key, b));
+      remove.textContent = admin.delete;
+      remove.dataset.action = 'remove';
+      remove.dataset.date = record.key;
+      remove.setAttribute('aria-label', `${admin.delete} ${record.date}`);
+      actions.append(edit, remove);
+      tr.append(actions);
+    }
     return tr;
   }
 
+  let rowsKey = '';
+
   return {
+    focusTargets: {
+      propose: () => (propose.hidden ? today.heading : propose),
+      records: () => (records.section.hidden ? title : records.heading),
+      row: (action, date) =>
+        tbody.querySelector<HTMLElement>(`[data-action="${action}"][data-date="${date}"]`),
+      adminEntry: () => (adminEntry.hidden ? title : adminEntry),
+    },
     render(model) {
       doc.title = model.documentTitle;
       title.textContent = model.title;
@@ -140,15 +229,33 @@ export function createView(root: HTMLElement, onRetry: () => void): View {
       if (model.today) {
         today.heading.textContent = model.today.heading;
         if (todayText.textContent !== model.today.text) todayText.textContent = model.today.text;
+        setText(propose, model.today.propose);
+        setText(notice, model.today.notice);
       }
 
       records.section.hidden = model.records === null;
       if (model.records) {
+        const { admin } = model.records;
         records.heading.textContent = model.records.heading;
         for (const [key, th] of columns) th.textContent = model.records.columns[key];
+        adminBar.hidden = admin === null;
+        actionsHead.hidden = admin === null;
+        table.classList.toggle('is-admin', admin !== null);
+        if (admin) {
+          adminLabel.textContent = admin.label;
+          addButton.textContent = admin.add;
+          backupButton.textContent = admin.backup;
+          logoutButton.textContent = admin.logout;
+          actionsHead.textContent = admin.actionsColumn;
+        }
+        setText(adminMessage, admin?.message ?? null);
         const rows = model.records.rows ?? [];
         table.hidden = rows.length === 0;
-        tbody.replaceChildren(...rows.map(row));
+        const key = JSON.stringify([rows, admin]);
+        if (key !== rowsKey) {
+          rowsKey = key;
+          tbody.replaceChildren(...rows.map((r) => row(r, admin)));
+        }
         setText(recordsMessage, model.records.message);
       }
 
@@ -156,6 +263,9 @@ export function createView(root: HTMLElement, onRetry: () => void): View {
       setText(lastUpdated, model.footer.lastUpdated);
       setText(clockNotice, model.footer.clockNotice);
       setText(syncWarning, model.footer.syncWarning);
+      const entry = model.footer.adminEntry;
+      setText(adminEntry, entry?.icon ?? null);
+      if (entry) adminEntry.setAttribute('aria-label', entry.label);
     },
   };
 }

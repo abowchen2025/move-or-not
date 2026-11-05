@@ -42,8 +42,14 @@ export interface CommonText {
   addRecord: string;
   logout: string;
   downloadBackup: string;
+  /** 頁尾管理入口的圖示（FR-09） */
+  adminEntryIcon: string;
   /** 頁尾 🔑 的無障礙名稱 */
   adminEntryLabel: string;
+  /** 管理模式中，記錄表上方的標示（FR-08） */
+  adminMode: string;
+  /** 管理模式中，記錄表「編輯／刪除」那一欄的欄名 */
+  actionsColumn: string;
   passphrasePrompt: string;
   dateLabel: string;
   noteLabel: string;

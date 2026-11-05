@@ -418,3 +418,39 @@ describe('§4.1-5 退路模式', () => {
     controller.stop();
   });
 });
+
+describe('FR-06 寫入後立即重新抓取', () => {
+  it('refreshNow() 立即抓一次 state', async () => {
+    const { server, controller } = setup();
+    controller.start();
+    await vi.advanceTimersByTimeAsync(0);
+    const before = server.getState.mock.calls.length;
+    await controller.refreshNow();
+    expect(server.getState.mock.calls.length).toBe(before + 1);
+    controller.stop();
+  });
+
+  it('抓取進行中時，結束後再抓一次（避免拿到寫入前的結果）', async () => {
+    const { server, controller, snapshots } = setup();
+    controller.start();
+    await vi.advanceTimersByTimeAsync(0);
+    let release!: () => void;
+    server.getState.mockImplementationOnce(
+      (seasonId: string) =>
+        new Promise<SeasonState>((resolve) => {
+          release = () => resolve(makeState({ serverNow: server.serverNow, seasonId }));
+        }),
+    );
+    const polling = controller.refresh();
+    const before = server.getState.mock.calls.length;
+    server.records = [...server.records, record('2026-10-29', true, false)];
+    await controller.refreshNow();
+    expect(server.getState.mock.calls.length).toBe(before);
+    release();
+    await polling;
+    await vi.advanceTimersByTimeAsync(0);
+    expect(server.getState.mock.calls.length).toBe(before + 1);
+    expect(lastReady(snapshots).state.records).toHaveLength(2);
+    controller.stop();
+  });
+});

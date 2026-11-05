@@ -60,6 +60,9 @@ describe('FR-05 今日狀態的文字', () => {
     expect(model.today).toEqual({
       heading: story.sections.today,
       text: story.today.endedEarlier({ date: '10/28（三）' }),
+      // 已完結：「提了」隱藏（FR-05、D-31）
+      propose: null,
+      notice: null,
     });
   });
 
@@ -80,18 +83,21 @@ describe('FR-07 記錄表', () => {
     expect(model.records?.columns).toEqual(story.recordTable);
     expect(model.records?.rows).toEqual([
       {
+        key: '2026-10-28',
         date: '10/28（三）',
         proposed: { value: true, text: common.yes },
         executed: { value: false, text: common.no },
         note: 'c',
       },
       {
+        key: '2026-10-23',
         date: '10/23（五）',
         proposed: { value: false, text: common.no },
         executed: { value: false, text: common.no },
         note: 'b',
       },
       {
+        key: '2026-10-13',
         date: '10/13（二）',
         proposed: { value: true, text: common.yes },
         executed: { value: false, text: common.no },
@@ -208,5 +214,84 @@ describe('FR-11 讀取中與錯誤', () => {
       retry: common.retry,
     });
     expect(model.status).toBeNull();
+  });
+});
+
+describe('FR-05、FR-06 「提了」按鈕', () => {
+  it('連載中顯示（今天沒有記錄、今天提了但 executed=false 都顯示）', () => {
+    expect(buildViewModel(ready([]), story).today?.propose).toBe(story.actions.propose);
+    expect(buildViewModel(ready([record('2026-10-30', true, false)]), story).today?.propose).toBe(
+      story.actions.propose,
+    );
+  });
+
+  it('D-31 已完結後一律隱藏（含完結日是今天）', () => {
+    expect(
+      buildViewModel(ready([record('2026-10-28', true, true)]), story).today?.propose,
+    ).toBeNull();
+    expect(
+      buildViewModel(ready([record('2026-10-30', true, true)]), story).today?.propose,
+    ).toBeNull();
+  });
+
+  it('D-27 起始日在未來時沒有可寫的日期，隱藏', () => {
+    const snapshot: Snapshot = {
+      kind: 'ready',
+      seasonId: 'season-1',
+      state: makeState({ serverNow: NOW, startDate: '2026-12-01' }),
+      syncFailing: false,
+    };
+    expect(buildViewModel(snapshot, story).today?.propose).toBeNull();
+  });
+
+  it('讀取中與退路模式沒有今日狀態區塊，也就沒有「提了」', () => {
+    expect(buildViewModel({ kind: 'loading', seasonId: 'season-1' }, story).today).toBeNull();
+    const fallback: Snapshot = {
+      kind: 'fallback',
+      seasonId: 'season-1',
+      season,
+      localNow: NOW,
+      errorCode: null,
+    };
+    expect(buildViewModel(fallback, story).today).toBeNull();
+  });
+
+  it('補記提示來自畫面狀態', () => {
+    const notice = story.menu.backfillDone({ date: '10/29（四）' });
+    expect(
+      buildViewModel(ready(), story, { admin: false, notice, adminMessage: null }).today?.notice,
+    ).toBe(notice);
+  });
+});
+
+describe('FR-08、FR-09 管理模式與 🔑', () => {
+  it('不在管理模式：頁尾有 🔑，記錄表沒有管理按鈕', () => {
+    const model = buildViewModel(ready(), story);
+    expect(model.footer.adminEntry).toEqual({
+      icon: common.adminEntryIcon,
+      label: common.adminEntryLabel,
+    });
+    expect(model.records?.admin).toBeNull();
+  });
+
+  it('管理模式：記錄表上方有新增／下載備份／登出，每列有編輯／刪除；🔑 隱藏', () => {
+    const model = buildViewModel(ready(), story, { admin: true, notice: null, adminMessage: 'x' });
+    expect(model.records?.admin).toEqual({
+      label: common.adminMode,
+      add: common.addRecord,
+      backup: common.downloadBackup,
+      logout: common.logout,
+      actionsColumn: common.actionsColumn,
+      edit: common.edit,
+      delete: common.delete,
+      message: 'x',
+    });
+    expect(model.footer.adminEntry).toBeNull();
+  });
+
+  it('資料未載入時不顯示 🔑', () => {
+    expect(
+      buildViewModel({ kind: 'loading', seasonId: 'season-1' }, story).footer.adminEntry,
+    ).toBeNull();
   });
 });

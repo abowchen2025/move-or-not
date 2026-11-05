@@ -60,3 +60,18 @@ describe('style.css', () => {
     }
   });
 });
+
+describe('D-39 桌機的小字', () => {
+  const block = (selector: string) => {
+    const start = css.indexOf(`${selector} {`);
+    return css.slice(start, css.indexOf('}', start));
+  };
+
+  it('起算日說明與 KPI 小字：手機 12px、桌機 24px；頁尾維持 12px', () => {
+    expect(block(':root')).toMatch(/--fs-note:\s*12px/);
+    expect(block(":root[data-layout='desktop']")).toMatch(/--fs-note:\s*24px/);
+    expect(css).toMatch(/\.since,\s*\.quip\s*\{\s*font-size:\s*var\(--fs-note\)/);
+    expect(css).toMatch(/\.footer\s*\{[^}]*font-size:\s*var\(--fs-small\)/);
+    expect(block(":root[data-layout='desktop']")).not.toMatch(/--fs-small/);
+  });
+});
