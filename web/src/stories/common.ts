@@ -3,6 +3,11 @@ import type { CommonText } from './types';
 /** 與季別無關的介面文字（D-17）。 */
 export const common = {
   weekdays: ['日', '一', '二', '三', '四', '五', '六'],
+  formats: {
+    monthDay: ({ month, day, weekday }) => `${month}/${day}（${weekday}）`,
+    fullDate: ({ year, month, day }) => `${year}/${month}/${day}`,
+    dateTime: ({ month, day, hour, minute }) => `${month}/${day} ${hour}:${minute}`,
+  },
   yes: '是',
   no: '否',
   retry: '重試',

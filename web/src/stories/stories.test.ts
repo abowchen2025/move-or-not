@@ -56,6 +56,17 @@ describe('劇本設定檔', () => {
     expect(story.errors.RECORD_NOT_FOUND).toBe(common.errors.RECORD_NOT_FOUND);
   });
 
+  it('日期與時間的顯示格式（FR-07、FR-09、§9.2 範例）', () => {
+    const { formats } = common;
+    expect(formats.monthDay({ month: '10', day: '28', weekday: common.weekdays[3] })).toBe(
+      '10/28（三）',
+    );
+    expect(formats.fullDate({ year: '2026', month: '10', day: '13' })).toBe('2026/10/13');
+    expect(formats.dateTime({ month: '10', day: '30', hour: '10', minute: '00' })).toBe(
+      '10/30 10:00',
+    );
+  });
+
   it('季別的錯誤文案優先於共用文案', () => {
     const story = resolveStory(season1, common);
     expect(story.errors.UNAUTHORIZED).toBe(season1.errors.UNAUTHORIZED);

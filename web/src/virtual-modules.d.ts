@@ -7,3 +7,10 @@ declare module 'virtual:seasons-config' {
   }>;
   export default seasons;
 }
+
+interface ImportMetaEnv {
+  /** API 位址（SRS §7、§8.5）；本機寫在 web/.env.local，正式建置由 Actions Variables 提供 */
+  readonly VITE_API_BASE?: string;
+  /** 網站完整網址（D-13，階段 7 使用） */
+  readonly VITE_SITE_URL?: string;
+}

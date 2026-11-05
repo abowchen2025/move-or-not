@@ -21,6 +21,15 @@ export interface RecordSummaryParam {
 export interface CommonText {
   /** 週日到週六，用於 MM/DD（週X） */
   weekdays: readonly [string, string, string, string, string, string, string];
+  /** 日期與時間的顯示格式；數字由程式補零後傳入 */
+  formats: {
+    /** 例：10/28（三） */
+    monthDay: Template<{ month: string; day: string; weekday: string }>;
+    /** 例：2026/10/13 */
+    fullDate: Template<{ year: string; month: string; day: string }>;
+    /** 例：10/30 10:00 */
+    dateTime: Template<{ month: string; day: string; hour: string; minute: string }>;
+  };
   yes: string;
   no: string;
   retry: string;
