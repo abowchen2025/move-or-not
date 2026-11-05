@@ -37,6 +37,24 @@ else
       ;;
     *)
       targets=("${existing_repo_files[@]}" "${dist_files[@]}")
+      # package-lock.json 的 "integrity" 值是隨機的 base64 雜湊，短關鍵字會碰巧命中（誤報）。
+      # 只把這個欄位的雜湊值去掉後再比對；套件名稱、網址等其餘內容照常檢查。
+      plain_targets=()
+      lock_sources=()
+      lock_copies=()
+      lock_tmp="$(mktemp -d)"
+      trap 'rm -rf "$lock_tmp"' EXIT
+      for file in "${targets[@]}"; do
+        if [[ "$file" =~ (^|/)package-lock\.json$ ]]; then
+          copy="$lock_tmp/${#lock_copies[@]}"
+          sed -E 's#("integrity"[[:space:]]*:[[:space:]]*")sha[0-9]+-[A-Za-z0-9+/=]+( sha[0-9]+-[A-Za-z0-9+/=]+)*"#\1"#g' \
+            "$file" > "$copy"
+          lock_sources+=("$file")
+          lock_copies+=("$copy")
+        else
+          plain_targets+=("$file")
+        fi
+      done
       index=0
       hits=0
       while IFS= read -r line || [ -n "$line" ]; do
@@ -50,7 +68,13 @@ else
           [ -n "$matched" ] || continue
           echo "  [命中] 第 ${index} 個關鍵字：${matched}" >&2
           hits=$((hits + 1))
-        done < <(grep -I -i -l -F -e "$keyword" -- "${targets[@]}" 2>/dev/null)
+        done < <(grep -I -i -l -F -e "$keyword" -- "${plain_targets[@]}" /dev/null 2>/dev/null)
+        for i in "${!lock_copies[@]}"; do
+          if grep -I -i -q -F -e "$keyword" -- "${lock_copies[$i]}"; then
+            echo "  [命中] 第 ${index} 個關鍵字：${lock_sources[$i]}" >&2
+            hits=$((hits + 1))
+          fi
+        done
       done < "$DEID_KEYWORDS_FILE"
       if [ "$hits" -gt 0 ]; then
         echo "  [失敗] 共 ${hits} 處命中。" >&2

@@ -58,9 +58,15 @@ else {
             Where-Object { $_ -and -not $_.StartsWith('#') })
         $targets = @($repoFiles) + @($distFiles)
         $hits = 0
+        # package-lock.json 的 "integrity" 值是隨機的 base64 雜湊，短關鍵字會碰巧命中（誤報）。
+        # 只把這個欄位的雜湊值去掉後再比對；套件名稱、網址等其餘內容照常檢查。
+        $integrityPattern = '("integrity"\s*:\s*")sha[0-9]+-[A-Za-z0-9+/=]+( sha[0-9]+-[A-Za-z0-9+/=]+)*"'
         foreach ($target in $targets) {
             $text = Read-TextFile (Join-Path $root $target)
             if ($null -eq $text) { continue }
+            if ($target -match '(^|/)package-lock\.json$') {
+                $text = [regex]::Replace($text, $integrityPattern, '$1"')
+            }
             for ($k = 0; $k -lt $keywords.Count; $k++) {
                 if ($text.IndexOf($keywords[$k], [StringComparison]::OrdinalIgnoreCase) -ge 0) {
                     Write-Fail ("  [命中] 第 {0} 個關鍵字：{1}" -f ($k + 1), $target)

@@ -76,6 +76,24 @@ jobs:
             exit 1
           fi
           rm web/src/__ac30_probe.ts
+      # 確認 package-lock.json 只略過 integrity 雜湊值，其餘內容與其他檔案照常比對
+      # （關鍵字由兩段字串組成，避免本檔自己命中）
+      - name: check-deid 腳本自我測試
+        run: |
+          kw="$(printf '%s%s' 'zq' 'xvw')"
+          list="$RUNNER_TEMP/deid-probe.txt"
+          printf '%s\n' "$kw" > "$list"
+          export DEID_KEYWORDS_FILE="$list"
+          hash="sha512-AB${kw}CD+/=="
+          mkdir __deid_probe
+          printf '{"integrity": "%s"}\n' "$hash" > __deid_probe/package-lock.json
+          bash scripts/check-deid.sh || { echo "lock 檔雜湊內的命中應該略過" >&2; exit 1; }
+          printf '{"resolved": "https://example.invalid/%s.tgz"}\n' "$kw" > __deid_probe/package-lock.json
+          if bash scripts/check-deid.sh; then echo "lock 檔其他欄位應該命中" >&2; exit 1; fi
+          printf '{"integrity": "%s"}\n' "$hash" > __deid_probe/package-lock.json
+          printf '{"integrity": "%s"}\n' "$hash" > __deid_probe/other.json
+          if bash scripts/check-deid.sh; then echo "略過只適用 package-lock.json" >&2; exit 1; fi
+          rm -rf __deid_probe
 
   checks-powershell:
     name: AC-30 與 check-deid（Windows PowerShell 5.1）
@@ -99,4 +117,25 @@ jobs:
           ./scripts/check-ac30.ps1
           if ($LASTEXITCODE -eq 0) { Write-Error 'AC-30 腳本應該失敗卻通過'; exit 1 }
           Remove-Item web/src/__ac30_probe.ts
+          exit 0
+      - name: check-deid.ps1 腳本自我測試
+        shell: powershell
+        run: |
+          $kw = 'zq' + 'xvw'
+          $list = Join-Path $env:RUNNER_TEMP 'deid-probe.txt'
+          [IO.File]::WriteAllText($list, "$kw`n")
+          $env:DEID_KEYWORDS_FILE = $list
+          $hash = "sha512-AB${kw}CD+/=="
+          New-Item -ItemType Directory __deid_probe | Out-Null
+          [IO.File]::WriteAllText("$PWD/__deid_probe/package-lock.json", "{`"integrity`": `"$hash`"}`n")
+          ./scripts/check-deid.ps1
+          if ($LASTEXITCODE -ne 0) { Write-Error 'lock 檔雜湊內的命中應該略過'; exit 1 }
+          [IO.File]::WriteAllText("$PWD/__deid_probe/package-lock.json", "{`"resolved`": `"https://example.invalid/$kw.tgz`"}`n")
+          ./scripts/check-deid.ps1
+          if ($LASTEXITCODE -eq 0) { Write-Error 'lock 檔其他欄位應該命中'; exit 1 }
+          [IO.File]::WriteAllText("$PWD/__deid_probe/package-lock.json", "{`"integrity`": `"$hash`"}`n")
+          [IO.File]::WriteAllText("$PWD/__deid_probe/other.json", "{`"integrity`": `"$hash`"}`n")
+          ./scripts/check-deid.ps1
+          if ($LASTEXITCODE -eq 0) { Write-Error '略過只適用 package-lock.json'; exit 1 }
+          Remove-Item -Recurse __deid_probe
           exit 0
