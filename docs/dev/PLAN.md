@@ -54,7 +54,7 @@
 
 - **範圍**：FR-01、03（不含跳數字動畫）、04、05、07、09、10、11；§4.1～4.4 前端部分；§3.3 規則 1、3 的前端部分；D-04、D-05、D-06、D-22-a、c、k、l、D-27（退路模式的天數同樣最小為 0）。
 - **產出（預定）**：
-  - `web/src/time/`（offset、台灣日期、天數純函式）、`web/src/api/`（client、15 秒整段逾時、錯誤代碼轉文案）、`web/src/season/`（`?season=` 解析、劇本載入）、`web/src/sync/`（60 秒輪詢、`visibilitychange`、每秒跨日檢查、D-06 連續失敗計數）、`web/src/ui/`（DOM 區塊）。
+  - `web/src/time/`（offset、台灣日期、天數純函式）、`web/src/api/`（client、15 秒整段逾時、錯誤代碼轉文案）、`web/src/season/`（`?season=` 解析、劇本載入）、`web/src/sync/`（60 秒輪詢、`visibilitychange`、每秒跨日檢查、D-06 連續失敗計數）、`web/src/view/`（DOM 區塊；原預定名稱為 `web/src/ui/`，階段 3 改名，見 §2 第 13 項）。
   - Vite 外掛：建置與 dev 時把 `api/seasons.config.json` 的 `startDate`、`countInclusive` 以虛擬模組提供給退路模式（D-04；方式見 §5 查證）。
   - 俐方體 11 號 woff2 與 `OFL.txt`（`web/public/fonts/`）、基本 CSS（對話視窗、色票 §9.2、`font-display: swap`）。
   - Playwright 安裝與 AC-02、03、04、18 的瀏覽器測試（API 用 `page.route` 模擬）。
@@ -111,6 +111,7 @@
 | 10 | 新增 `docs/dev/AC_REPORT.md`（階段 7） | 骨架的「AC 總對照」需要一個落地檔案 |
 | 11 | 階段 0 修改了 CLAUDE.md §4 的 Railway 那一列（只改這一列） | D-23，SA 授權在本 PR 修改 |
 | 12 | 移除 `api/railway.toml`：階段 2、7 都不產出任何 Railway 設定檔 | D-23 |
+| 13 | 階段 3 的 DOM 區塊目錄由 `web/src/ui/` 改為 `web/src/view/`（階段 4 的目錄沿用與否，於階段 4 動工時再定） | 該目錄同時放「狀態 → 畫面資料」的純函式（`model.ts`）與 DOM 輸出（`render.ts`）；SA 於階段 3 指示中要求在 PLAN 與 PR 註明 |
 
 ---
 
@@ -359,7 +360,7 @@
 |---|---|---|---|---|
 | 1 | PixiJS v8 與 pixi-filters | 已查證 | `pixi.js` 最新為 8.22.0；對應 v8 的是 `pixi-filters` 6.x（最新 6.1.5，peer 依賴 `pixi.js >=8.0.0-0`），含 `CRTFilter`（`pixi-filters/crt`）與 `GlowFilter`（`pixi-filters/glow`），可個別 import | https://registry.npmjs.org/pixi.js/latest 、 https://registry.npmjs.org/pixi-filters/latest 、 https://github.com/pixijs/filters |
 | 2 | spritesheet JSON 的 `meta` 能否放自訂欄位 | 部分查證 | v8 原始碼中 `SpritesheetData.meta` 型別**沒有**索引簽章（只有 `scale`、`image`、`size`、`frameTags` 等）；但 `Spritesheet<S extends SpritesheetData>` 為泛型、`data` 保留原始 JSON，載入器原樣傳入。**推論**：自訂欄位在執行期可由 `spritesheet.data.meta` 讀到，TypeScript 端需自行擴充型別。`animations` 只支援影格名稱陣列，**沒有**各動作速度，速度需放在自訂 `meta` 欄位（符合 D-22-i）。階段 5 以單元測試實證 | https://github.com/pixijs/pixijs/blob/dev/src/spritesheet/Spritesheet.ts 、 https://github.com/pixijs/pixijs/blob/dev/src/spritesheet/spritesheetAsset.ts |
-| 3 | 俐方體 11 號 woff2 與授權檔 | 已查證 | 官方 repo `ACh-K/Cubic-11`，最新版 v1.500（2026-06-27）；release 沒有附檔，woff2 在 repo 內 `fonts/web/Cubic_11.woff2`（約 400KB）；授權 SIL OFL 1.1，授權檔為 repo 根目錄 `OFL.txt`。階段 3 從 tag v1.500 取得並記錄版本 | https://github.com/ACh-K/Cubic-11 、 https://api.github.com/repos/ACh-K/Cubic-11/releases/latest |
+| 3 | 俐方體 11 號 woff2 與授權檔 | 已查證 | 官方 repo `ACh-K/Cubic-11`，最新版 v1.500（2026-06-27）；release 沒有附檔，woff2 在 repo 內 `fonts/web/Cubic_11.woff2`（約 400KB）；授權 SIL OFL 1.1，授權檔為 repo 根目錄 `OFL.txt`。**階段 3 核對（2026-11-05）**：`web/public/fonts/Cubic_11.woff2` 的 git blob SHA-1 為 `fa0ab5370dd0058b22acbf77dfc2afef8d0d8543`，與官方 repo tag `v1.500`（commit `4c566f7d6cc5c05ee360fe9cff56b5da1fcafd4d`）的 `fonts/web/Cubic_11.woff2` 完全相同，與 v1.451、v1.450、v1.430 都不同；`web/public/fonts/OFL.txt` 的 blob `4e863313ebd22ae0b44ea5f9538142b6b10e8f29` 與 v1.500 的 `OFL.txt` 相同。核對方式：本機 `git hash-object` 對照 GitHub contents API 回傳的 `sha` | https://github.com/ACh-K/Cubic-11/releases/tag/v1.500 、 https://api.github.com/repos/ACh-K/Cubic-11/contents/fonts/web/Cubic_11.woff2?ref=v1.500 |
 | 4 | Railway 轉送來源 IP 的標頭（NFR-S3、D-22-d） | 部分查證 | 官方文件只列出 `X-Real-IP`（「identifying client's remote IP」）、`X-Forwarded-Proto`、`X-Forwarded-Host` 等，**沒有**提到 `X-Forwarded-For`，也**沒有**說明是否覆寫客戶端自帶的同名標頭。社群討論有人稱邊緣節點會覆寫，但不是官方說法。**需部署後實測**；依 D-24 預設讀 `X-Real-IP`，階段 7 實測 | https://docs.railway.com/networking/public-networking/specs-and-limits |
 | 5 | Railway Volume 與副本數 | 已查證 | 「Replicas cannot be used with volumes」；有 Volume 的服務重新部署時會有短暫停機；預設容量 Free/Trial 0.5GB、Hobby 5GB、Pro 50GB；Railway 會自動提供 `RAILWAY_VOLUME_MOUNT_PATH`（符合 §8.5 的退路順序） | https://docs.railway.com/reference/volumes 、 https://docs.railway.com/reference/variables |
 | 5a | Railway 設定檔 `railway.toml`（原 CLAUDE.md §4） | 已查證（已依 D-23 處理） | Config as Code（`railway.toml`／`railway.json`）**已棄用**：「New services cannot opt into Config as Code」，既有檔案於 **2026-12-01** 停止讀取。取代方案為 Infrastructure as Code（`.railway/railway.ts`，TypeScript 為正式版、Python 為 beta），且「Railway doesn't read `.railway/` during deploys」，需用 CLI `railway config apply` 或 GitHub Action 套用。依 D-23 兩者都不採用，改在 Railway 介面設定 | https://docs.railway.com/reference/config-as-code 、 https://docs.railway.com/infrastructure-as-code |
