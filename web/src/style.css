@@ -1,15 +1,53 @@
-/* 階段 1 骨架樣式；像素字型、對話視窗與完整色票在階段 3 加入（SRS §9.2）。 */
+/*
+ * 版面與對話視窗樣式（SRS §9.1、§9.2、FR-01、FR-07、§8.4）。
+ * - 字級一律為 12px 的整數倍（俐方體 11 號的字身框為 12×12）。
+ * - 手機／桌機只有一個斷點（D-33），數值在 src/config.ts；這裡不寫寬度的 media query，
+ *   改用 src/view/layout.ts 依斷點設定的 <html data-layout="desktop">。
+ * - 色票的對比度由 src/view/style.test.ts 檢查（§8.4，至少 4.5:1）。
+ */
+@font-face {
+  font-family: 'Cubic 11';
+  src: url('/fonts/Cubic_11.woff2') format('woff2');
+  font-display: swap;
+}
+
 :root {
   --bg-dark: #0b0f2a;
   --bg-light: #2a1f5c;
+  --window-top: #3048b8;
+  --window-bottom: #101c68;
+  --window-border: #f8f8f8;
+  --outline: #000000;
   --text: #f8f8f8;
   --accent: #f8d850;
+  --yes: #58d858;
+  --no: #f85858;
+  /* 「是／否」標籤上的文字：綠、紅底配深色字才達到 4.5:1 */
+  --chip-text: #0b0f2a;
+
+  --fs-small: 12px;
+  --fs-body: 12px;
+  --fs-title: 36px;
+  --fs-days-label: 24px;
+  --fs-days-value: 48px;
+  --gap: 12px;
+}
+
+:root[data-layout='desktop'] {
+  --fs-body: 24px;
+  --fs-title: 48px;
+  --fs-days-value: 72px;
+  --gap: 24px;
 }
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 html,
@@ -22,38 +60,225 @@ body {
   background: linear-gradient(180deg, var(--bg-dark), var(--bg-light));
   background-attachment: fixed;
   color: var(--text);
-  font-family: system-ui, sans-serif;
+  font-family: 'Cubic 11', monospace;
+  font-size: var(--fs-body);
+  line-height: 1.5;
 }
 
 #app {
-  max-width: 720px;
+  max-width: 960px;
   min-height: 100vh;
   margin: 0 auto;
-  padding: 24px 16px;
+  padding: var(--gap) 16px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+}
+
+.header {
+  text-align: center;
 }
 
 .title {
-  margin: 24px 0;
-  font-size: 36px;
-  text-align: center;
+  display: inline-block;
+  margin: var(--gap) 0;
+  font-size: var(--fs-title);
+  font-weight: normal;
+  line-height: 1.25;
 }
 
-@media (min-width: 600px) {
-  .title {
-    font-size: 48px;
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.content p {
+  margin: 0;
+}
+
+/* 讀取中（FR-11）：像素風閃爍文字 */
+.loading {
+  color: var(--accent);
+  text-align: center;
+  animation: blink 1s steps(1, end) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
   }
 }
 
-.loading {
-  color: var(--accent);
-  font-size: 12px;
+@media (prefers-reduced-motion: reduce) {
+  .loading {
+    animation: dim 3s ease-in-out infinite alternate;
+  }
 }
 
+@keyframes dim {
+  to {
+    opacity: 0.4;
+  }
+}
+
+/* SNES 角色扮演遊戲的對話視窗：藍色漸層、白色外框、外側再包黑線 */
+.window {
+  position: relative;
+  min-width: 0;
+  margin-top: var(--fs-small);
+  padding: calc(var(--gap) + 6px) var(--gap) var(--gap);
+  background: linear-gradient(180deg, var(--window-top), var(--window-bottom));
+  border: 3px solid var(--window-border);
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 1px var(--outline),
+    inset 0 0 0 1px var(--outline);
+}
+
+.window-title {
+  position: absolute;
+  top: 0;
+  left: var(--gap);
+  transform: translateY(-50%);
+  margin: 0;
+  padding: 0 6px;
+  background: var(--window-top);
+  font-size: var(--fs-body);
+  font-weight: normal;
+  line-height: 1.5;
+}
+
+.alert {
+  text-align: center;
+}
+
+.alert-detail {
+  color: var(--accent);
+}
+
+.pixel-button {
+  min-width: 96px;
+  min-height: 44px;
+  margin-top: var(--gap);
+  padding: 6px var(--gap);
+  border: 3px solid var(--window-border);
+  border-radius: 6px;
+  background: var(--window-bottom);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pixel-button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* FR-03 天數 */
+.days {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  column-gap: var(--fs-small);
+  font-size: var(--fs-days-label);
+}
+
+.days-value {
+  color: var(--accent);
+  font-size: var(--fs-days-value);
+  font-weight: normal;
+  line-height: 1;
+}
+
+.since,
+.stats,
+.quip {
+  text-align: center;
+}
+
+.since,
+.quip {
+  font-size: var(--fs-small);
+}
+
+.stats {
+  margin-top: var(--gap) !important;
+}
+
+.quip {
+  color: var(--accent);
+}
+
+/* FR-05 今日狀態 */
+.today-status {
+  text-align: center;
+}
+
+/* FR-07 記錄表：手機 360px 不得出現水平捲軸，備註自動換行 */
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.records-table th,
+.records-table td {
+  padding: 6px 3px;
+  text-align: left;
+  vertical-align: top;
+  font-weight: normal;
+  overflow-wrap: anywhere;
+}
+
+.records-table thead th {
+  border-bottom: 3px solid var(--window-border);
+}
+
+.records-table tbody tr + tr td {
+  border-top: 1px solid rgb(248 248 248 / 40%);
+}
+
+.records-table .col-date {
+  width: 7em;
+}
+
+.records-table .col-proposed,
+.records-table .col-executed {
+  width: 3em;
+}
+
+.yes-no {
+  display: inline-block;
+  padding: 0 3px;
+  color: var(--chip-text);
+}
+
+.yes-no.is-yes {
+  background: var(--yes);
+}
+
+.yes-no.is-no {
+  background: var(--no);
+}
+
+.records-message {
+  text-align: center;
+}
+
+/* FR-09 頁尾 */
 .footer {
   margin-top: auto;
-  font-size: 12px;
+  padding-top: var(--gap);
+  font-size: var(--fs-small);
   text-align: center;
+}
+
+.footer p {
+  margin: 0;
+}
+
+.clock-notice,
+.sync-warning {
+  color: var(--accent);
 }
