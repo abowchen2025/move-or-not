@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeState, record, seasonsList, taipei } from '../testing/fixtures';
-import { ApiRequestError, createApiClient, withinBudget } from './client';
+import { ApiRequestError, createApiClient, once, withinBudget } from './client';
 
 const NOW = taipei('2026-10-30T10:00:00');
 const budget = { timeoutMs: 15_000, retryDelayMs: 1_000 };
@@ -148,5 +148,138 @@ describe('withinBudget（FR-11 的 15 秒、冷啟動重試）', () => {
     await vi.advanceTimersByTimeAsync(15_000);
     expect(await result).toMatchObject({ kind: 'timeout' });
     expect(aborted).toBe(true);
+  });
+});
+
+describe('寫入與驗證（§7.4～7.7）', () => {
+  // 密語在執行時產生，不寫死（CLAUDE.md §3.4）
+  const passphrase = `t-${crypto.randomUUID()}`;
+  const input = { proposed: true, executed: false, note: null };
+
+  it('PUT 帶 Bearer 密語與 JSON body，回傳通過檢查的記錄', async () => {
+    const saved = record('2026-10-29', true, false, '');
+    const fetchImpl = fakeFetch(jsonResponse(saved));
+    const api = createApiClient('https://api.example.test', fetchImpl);
+    await expect(
+      api.putRecord('season-1', '2026-10-29', input, passphrase, signal()),
+    ).resolves.toEqual(saved);
+    const [url, init] = fetchImpl.mock.calls[0]!;
+    expect(url).toBe('https://api.example.test/api/seasons/season-1/records/2026-10-29');
+    expect(init).toMatchObject({
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${passphrase}`, 'Content-Type': 'application/json' },
+    });
+    expect(JSON.parse(init!.body as string)).toEqual({
+      proposed: true,
+      executed: false,
+      note: null,
+    });
+  });
+
+  it('密語不會出現在網址與錯誤訊息', async () => {
+    const fetchImpl = fakeFetch(
+      jsonResponse({ error: { code: 'UNAUTHORIZED', message: 'x' } }, 401),
+    );
+    const api = createApiClient('', fetchImpl);
+    const error = (await api.checkAuth(passphrase, signal()).catch((e: unknown) => e)) as Error;
+    expect(String(fetchImpl.mock.calls[0]![0])).not.toContain(passphrase);
+    expect(error.message).not.toContain(passphrase);
+    expect(error).toMatchObject({ status: 401, code: 'UNAUTHORIZED', method: 'POST' });
+  });
+
+  it('auth/check 回 204 時 resolve；DELETE 回 204 時 resolve', async () => {
+    const fetchImpl = fakeFetch(
+      new Response(null, { status: 204 }),
+      new Response(null, { status: 204 }),
+    );
+    const api = createApiClient('', fetchImpl);
+    await expect(api.checkAuth(passphrase, signal())).resolves.toBeUndefined();
+    await expect(
+      api.deleteRecord('season-1', '2026-10-29', passphrase, signal()),
+    ).resolves.toBeUndefined();
+    expect(fetchImpl.mock.calls.map(([, init]) => init?.method)).toEqual(['POST', 'DELETE']);
+  });
+
+  it('export 回傳資料檔內容', async () => {
+    const api = createApiClient('', fakeFetch(jsonResponse({ schemaVersion: 1 })));
+    const blob = await api.exportSeason('season-1', passphrase, signal());
+    expect(JSON.parse(await blob.text())).toEqual({ schemaVersion: 1 });
+  });
+});
+
+describe('D-40 只有 GET 自動重試', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const passphrase = `t-${crypto.randomUUID()}`;
+
+  it.each([502, 503, 504])('GET 的 %i 可以重試', (status) => {
+    expect(new ApiRequestError('http', status, null, 'GET').retryable).toBe(true);
+  });
+
+  it.each(['PUT', 'DELETE', 'POST'] as const)(
+    '%s 的 502／503／504 與網路錯誤都不可重試',
+    (method) => {
+      for (const status of [502, 503, 504]) {
+        expect(new ApiRequestError('http', status, null, method).retryable).toBe(false);
+      }
+      expect(new ApiRequestError('network', null, null, method).retryable).toBe(false);
+    },
+  );
+
+  it.each([
+    [
+      'PUT',
+      (api: ReturnType<typeof createApiClient>, s: AbortSignal) =>
+        api.putRecord(
+          'season-1',
+          '2026-10-29',
+          { proposed: true, executed: false, note: null },
+          passphrase,
+          s,
+        ),
+    ],
+    [
+      'DELETE',
+      (api: ReturnType<typeof createApiClient>, s: AbortSignal) =>
+        api.deleteRecord('season-1', '2026-10-29', passphrase, s),
+    ],
+    [
+      'POST auth/check',
+      (api: ReturnType<typeof createApiClient>, s: AbortSignal) => api.checkAuth(passphrase, s),
+    ],
+  ])('%s 失敗時即使放進 withinBudget 也只送出一次', async (_label, call) => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('Bad Gateway', { status: 502 }));
+    const api = createApiClient('', fetchImpl);
+    const result = withinBudget<unknown>((s) => call(api, s), budget).catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(await result).toMatchObject({ kind: 'http', status: 502 });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it('once() 逾時時中止並丟出 timeout，不重試', async () => {
+    const fetchImpl = vi.fn<typeof fetch>(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('aborted', 'AbortError')),
+          );
+        }),
+    );
+    const api = createApiClient('', fetchImpl);
+    const result = once(
+      (s) => api.deleteRecord('season-1', '2026-10-29', passphrase, s),
+      15_000,
+      'DELETE',
+    ).catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(await result).toMatchObject({ kind: 'timeout', method: 'DELETE' });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });
